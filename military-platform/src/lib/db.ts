@@ -388,3 +388,68 @@ export function getAllCapabilityCodes() {
   db.close();
   return codes;
 }
+
+export function getPathsWithCounts() {
+  const db = getDb();
+  const paths = db
+    .prepare(
+      `SELECT path, COUNT(DISTINCT capability) as capability_count, COUNT(*) as total_count
+       FROM key_data WHERE path != ''
+       GROUP BY path ORDER BY path`
+    )
+    .all() as { path: string; capability_count: number; total_count: number }[];
+  db.close();
+  return paths;
+}
+
+export function getCapabilitiesByPath(pathName: string) {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT k.capability_code, k.capability, k.sub_capability, k.type,
+              s.definition
+       FROM key_data k
+       LEFT JOIN special_requirements s ON k.capability_code = s.capability_code
+       WHERE k.path = ?
+       ORDER BY k.capability, k.type`
+    )
+    .all(pathName) as {
+    capability_code: string;
+    capability: string;
+    sub_capability: string;
+    type: string;
+    definition: string;
+  }[];
+  db.close();
+
+  const grouped: Record<
+    string,
+    {
+      capability: string;
+      types: { capability_code: string; type: string; sub_capability: string; definition: string }[];
+    }
+  > = {};
+
+  for (const row of rows) {
+    if (!grouped[row.capability]) {
+      grouped[row.capability] = { capability: row.capability, types: [] };
+    }
+    grouped[row.capability].types.push({
+      capability_code: row.capability_code,
+      type: row.type,
+      sub_capability: row.sub_capability,
+      definition: row.definition,
+    });
+  }
+
+  return Object.values(grouped);
+}
+
+export function getTypeDetails(capabilityCode: string) {
+  const db = getDb();
+  const key = db.prepare("SELECT * FROM key_data WHERE capability_code = ?").get(capabilityCode) as Record<string, string> | undefined;
+  const special = db.prepare("SELECT * FROM special_requirements WHERE capability_code = ?").get(capabilityCode) as Record<string, string> | undefined;
+  const general = db.prepare("SELECT * FROM general_requirements WHERE capability_code = ?").get(capabilityCode) as Record<string, string> | undefined;
+  db.close();
+  return { key: key || null, special: special || null, general: general || null };
+}
