@@ -88,11 +88,11 @@ export default function Sidebar() {
 
           {/* Paths */}
           {MILITARY_PATHS.map((path) => {
-            const isActive = currentPathSlug === path.slug;
+            const isActive = currentPathSlug === path.name;
             return (
               <Link
-                key={path.slug}
-                href={`/path/${encodeURIComponent(path.slug)}`}
+                key={path.name}
+                href={`/path/${encodeURIComponent(path.name)}`}
                 onClick={() => setOpen(false)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all ${
                   isActive

@@ -61,8 +61,8 @@ export default function HomePage() {
         <section className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-[18px]">
           {filtered.map((path) => (
             <Link
-              key={path.slug}
-              href={`/path/${encodeURIComponent(path.slug)}`}
+              key={path.name}
+              href={`/path/${encodeURIComponent(path.name)}`}
               className="group relative rounded-[18px] overflow-hidden border border-line bg-bg-soft shadow-[0_14px_40px_rgba(0,0,0,0.35)] transition-all duration-300 hover:-translate-y-1.5 hover:border-accent-light hover:shadow-[0_20px_60px_rgba(37,99,235,0.25)]"
             >
               <Image
@@ -79,7 +79,9 @@ export default function HomePage() {
               {/* Content */}
               <div className="absolute bottom-4 right-[18px] flex flex-col gap-1.5">
                 <div className="text-lg font-black text-text">{path.name}</div>
-                <div className="text-xs text-[rgba(241,245,249,0.75)]">{path.subtitle}</div>
+                <div className="text-xs text-[rgba(241,245,249,0.75)]">
+                  {path.capabilityCount} قدرة &bull; {path.subtitle}
+                </div>
               </div>
 
               {/* Shine */}

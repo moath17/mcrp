@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader2, ChevronDown, Layers } from "lucide-react";
+import { Loader2, ChevronDown, Layers, ImageIcon } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
-import { getPathBySlug, getPathImage } from "@/lib/paths-config";
+import { getPathBySlug, getPathImage, getDbNameFromSlug } from "@/lib/paths-config";
 
 interface CapabilityType {
   capability_code: string;
@@ -25,19 +25,20 @@ export default function PathPage() {
   const slug = decodeURIComponent(params.slug as string);
   const pathConfig = getPathBySlug(slug);
   const pathImage = getPathImage(slug);
+  const dbName = getDbNameFromSlug(slug);
 
   const [capabilities, setCapabilities] = useState<CapabilityGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedCap, setExpandedCap] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/path-capabilities?path=${encodeURIComponent(slug)}`)
+    fetch(`/api/path-capabilities?path=${encodeURIComponent(dbName)}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.success) setCapabilities(data.capabilities);
       })
       .finally(() => setLoading(false));
-  }, [slug]);
+  }, [dbName]);
 
   const toggleCapability = (capName: string) => {
     setExpandedCap((prev) => (prev === capName ? null : capName));
@@ -53,20 +54,18 @@ export default function PathPage() {
 
   return (
     <div className="animate-fade-in">
-      <Breadcrumb
-        items={[{ label: pathConfig?.name || slug }]}
-      />
+      <Breadcrumb items={[{ label: pathConfig?.name || slug }]} />
 
       {/* Path Header Banner */}
       <div className="relative rounded-2xl overflow-hidden mb-8 h-[200px]">
         <Image
           src={pathImage}
-          alt={slug}
+          alt={pathConfig?.name || slug}
           width={1200}
           height={200}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-bg/95 via-bg/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/95 via-[#0f172a]/60 to-transparent" />
         <div className="absolute bottom-6 right-6">
           <h1 className="text-3xl font-black text-text">{pathConfig?.name || slug}</h1>
           <p className="text-sm text-text-muted mt-1">
@@ -85,61 +84,88 @@ export default function PathPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {capabilities.map((cap) => {
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {capabilities.map((cap, capIdx) => {
             const isExpanded = expandedCap === cap.capability;
             return (
-              <div key={cap.capability} className="glass-panel rounded-2xl overflow-hidden transition-all duration-300">
-                {/* Capability Header */}
-                <button
-                  onClick={() => toggleCapability(cap.capability)}
-                  className="w-full flex items-center justify-between p-5 text-right hover:bg-glass transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-accent-soft flex items-center justify-center shrink-0">
-                      <Layers size={22} className="text-accent-light" />
+              <div
+                key={cap.capability}
+                className={`${isExpanded ? "sm:col-span-2 lg:col-span-3" : ""}`}
+              >
+                <div className="glass-panel rounded-2xl overflow-hidden transition-all duration-300">
+                  {/* Capability Card */}
+                  <button
+                    onClick={() => toggleCapability(cap.capability)}
+                    className="w-full text-right cursor-pointer group"
+                  >
+                    {/* Placeholder image area */}
+                    <div className="relative h-[140px] bg-gradient-to-br from-bg-card to-bg-soft flex items-center justify-center overflow-hidden">
+                      <Image
+                        src={`/images/capability-placeholder.svg`}
+                        alt={cap.capability}
+                        width={400}
+                        height={140}
+                        className="w-full h-full object-cover opacity-20"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <ImageIcon size={40} className="text-text-muted/20" />
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/90 to-transparent" />
+                      <div className="absolute bottom-3 right-4 left-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="text-base font-bold text-text">{cap.capability}</h3>
+                            <p className="text-xs text-text-muted mt-0.5">
+                              {cap.types.length} {cap.types.length === 1 ? "نوع" : "أنواع"}
+                            </p>
+                          </div>
+                          <div className="w-8 h-8 rounded-lg bg-accent-soft/50 flex items-center justify-center">
+                            <ChevronDown
+                              size={16}
+                              className={`text-accent-light transition-transform duration-300 ${
+                                isExpanded ? "rotate-180" : ""
+                              }`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {/* Capability number badge */}
+                      <div className="absolute top-3 left-3 text-xs px-2.5 py-1 rounded-full bg-accent-soft/80 text-accent-light font-medium border border-accent/20">
+                        قدرة {capIdx + 1}
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-text">{cap.capability}</h3>
-                      <p className="text-sm text-text-muted mt-0.5">
-                        {cap.types.length} {cap.types.length === 1 ? "نوع" : "أنواع"}
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronDown
-                    size={20}
-                    className={`text-text-muted transition-transform duration-300 ${
-                      isExpanded ? "rotate-180" : ""
-                    }`}
-                  />
-                </button>
+                  </button>
 
-                {/* Expanded Types */}
-                {isExpanded && (
-                  <div className="animate-expand border-t border-line">
-                    <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                      {cap.types.map((t, idx) => (
-                        <Link
-                          key={t.capability_code}
-                          href={`/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(t.capability_code)}`}
-                          className="group relative p-4 rounded-xl bg-bg-card/60 border border-line hover:border-accent/40 hover:bg-accent-soft/30 transition-all duration-200"
-                        >
-                          <div className="text-xs text-accent-light font-medium mb-1">
-                            نوع {idx + 1}
-                          </div>
-                          <div className="text-sm font-bold text-text group-hover:text-accent-light transition-colors">
-                            {t.type || t.capability_code}
-                          </div>
-                          {t.sub_capability && (
-                            <div className="text-xs text-text-muted mt-1 line-clamp-1">
-                              {t.sub_capability}
+                  {/* Expanded Types */}
+                  {isExpanded && (
+                    <div className="animate-expand border-t border-line">
+                      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {cap.types.map((t, idx) => (
+                          <Link
+                            key={t.capability_code}
+                            href={`/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(t.capability_code)}`}
+                            className="group relative p-4 rounded-xl bg-bg-card/60 border border-line hover:border-accent/40 hover:bg-accent-soft/30 transition-all duration-200"
+                          >
+                            <div className="text-xs text-accent-light font-medium mb-1">
+                              نوع {idx + 1}
                             </div>
-                          )}
-                        </Link>
-                      ))}
+                            <div className="text-sm font-bold text-text group-hover:text-accent-light transition-colors">
+                              {t.type || t.capability_code}
+                            </div>
+                            {t.sub_capability && (
+                              <div className="text-xs text-text-muted mt-1 line-clamp-1">
+                                {t.sub_capability}
+                              </div>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             );
           })}
