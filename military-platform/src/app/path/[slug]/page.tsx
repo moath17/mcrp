@@ -11,13 +11,18 @@ import { getPathBySlug, getPathImage, getDbNameFromSlug } from "@/lib/paths-conf
 interface CapabilityType {
   capability_code: string;
   type: string;
-  sub_capability: string;
   definition: string;
+}
+
+interface SubCapability {
+  sub_capability: string;
+  types: CapabilityType[];
 }
 
 interface CapabilityGroup {
   capability: string;
-  types: CapabilityType[];
+  subCapabilities: SubCapability[];
+  typesCount: number;
 }
 
 export default function PathPage() {
@@ -131,7 +136,9 @@ export default function PathPage() {
                           <div>
                             <h3 className="text-base font-bold text-text">{cap.capability}</h3>
                             <p className="text-xs text-text-muted mt-0.5">
-                              {cap.types.length} {cap.types.length === 1 ? "نوع" : "أنواع"}
+                              {cap.subCapabilities.length} قدرة فرعية
+                              <span className="opacity-60"> &bull; </span>
+                              {cap.typesCount} {cap.typesCount === 1 ? "نوع" : "أنواع"}
                             </p>
                           </div>
                           <div className="w-8 h-8 rounded-lg bg-accent-soft/50 flex items-center justify-center">
@@ -151,28 +158,34 @@ export default function PathPage() {
                     </div>
                   </button>
 
-                  {/* Expanded Types */}
+                  {/* Expanded Sub-capabilities → Types hierarchy */}
                   {isExpanded && (
                     <div className="animate-expand border-t border-line">
-                      <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                        {cap.types.map((t, idx) => (
-                          <Link
-                            key={t.capability_code}
-                            href={`/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(t.capability_code)}`}
-                            className="group relative p-4 rounded-xl bg-bg-card/60 border border-line hover:border-accent/40 hover:bg-accent-soft/30 transition-all duration-200"
-                          >
-                            <div className="text-xs text-accent-light font-medium mb-1">
-                              نوع {idx + 1}
+                      <div className="p-5 space-y-5">
+                        {cap.subCapabilities.map((sub, subIdx) => (
+                          <div key={`${sub.sub_capability}-${subIdx}`} className="space-y-2.5">
+                            <div className="flex items-center gap-2 pb-2 border-b border-line/60">
+                              <h4 className="text-sm font-bold text-accent2">
+                                {sub.sub_capability}
+                              </h4>
+                              <span className="text-[11px] text-text-muted/70 mr-auto">
+                                {sub.types.length} {sub.types.length === 1 ? "نوع" : "أنواع"}
+                              </span>
                             </div>
-                            <div className="text-sm font-bold text-text group-hover:text-accent-light transition-colors">
-                              {t.type || t.sub_capability || `نوع ${idx + 1}`}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                              {sub.types.map((t, idx) => (
+                                <Link
+                                  key={t.capability_code}
+                                  href={`/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(t.capability_code)}`}
+                                  className="group relative p-4 rounded-xl bg-bg-card/60 border border-line hover:border-accent/40 hover:bg-accent-soft/30 transition-all duration-200"
+                                >
+                                  <div className="text-sm font-bold text-text group-hover:text-accent-light transition-colors">
+                                    {t.type || `نوع ${idx + 1}`}
+                                  </div>
+                                </Link>
+                              ))}
                             </div>
-                            {t.sub_capability && (
-                              <div className="text-xs text-text-muted mt-1 line-clamp-1">
-                                {t.sub_capability}
-                              </div>
-                            )}
-                          </Link>
+                          </div>
                         ))}
                       </div>
                     </div>

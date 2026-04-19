@@ -1,9 +1,11 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
+import { parseExcelBuffer } from "./excel";
 
 const DB_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DB_DIR, "platform.db");
+const DEFAULT_XLSX_PATH = path.join(DB_DIR, "default.xlsx");
 
 function getDb(): Database.Database {
   if (!fs.existsSync(DB_DIR)) {
@@ -73,6 +75,13 @@ export function initializeDatabase() {
       ip TEXT DEFAULT 'local'
     );
 
+    CREATE TABLE IF NOT EXISTS data_source (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      source TEXT NOT NULL,
+      filename TEXT DEFAULT '',
+      loaded_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+    );
+
     CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
       capability_code,
       capability,
@@ -88,6 +97,66 @@ export function initializeDatabase() {
   `);
 
   db.close();
+
+  trySeedFromDefault();
+}
+
+function trySeedFromDefault() {
+  if (!fs.existsSync(DEFAULT_XLSX_PATH)) return;
+
+  const db = getDb();
+  const row = db
+    .prepare("SELECT COUNT(*) as c FROM key_data")
+    .get() as { c: number };
+  db.close();
+
+  if (row.c > 0) return;
+
+  try {
+    const buffer = fs.readFileSync(DEFAULT_XLSX_PATH);
+    const { keyData, specialData, generalData } = parseExcelBuffer(buffer);
+
+    if (keyData.length > 0) insertKeyData(keyData);
+    if (specialData.length > 0) insertSpecialRequirements(specialData);
+    if (generalData.length > 0) insertGeneralRequirements(generalData);
+
+    rebuildSearchIndex();
+
+    setDataSource("default", "default.xlsx");
+
+    addLog(
+      "تحميل تلقائي",
+      `تم تحميل الملف الافتراضي default.xlsx — البيانات الأساسية: ${keyData.length} صف، المتطلبات الخاصة: ${specialData.length} صف، المتطلبات العامة: ${generalData.length} صف`
+    );
+  } catch (error) {
+    console.error("Failed to seed from default xlsx:", error);
+  }
+}
+
+export function setDataSource(source: "default" | "upload", filename: string) {
+  const db = getDb();
+  db.prepare(
+    `INSERT INTO data_source (id, source, filename, loaded_at)
+     VALUES (1, ?, ?, datetime('now', 'localtime'))
+     ON CONFLICT(id) DO UPDATE SET
+       source = excluded.source,
+       filename = excluded.filename,
+       loaded_at = excluded.loaded_at`
+  ).run(source, filename);
+  db.close();
+}
+
+export function getDataSource(): {
+  source: string;
+  filename: string;
+  loaded_at: string;
+} | null {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT source, filename, loaded_at FROM data_source WHERE id = 1")
+    .get() as { source: string; filename: string; loaded_at: string } | undefined;
+  db.close();
+  return row || null;
 }
 
 export function clearData() {
@@ -406,14 +475,15 @@ export function getCapabilitiesByPath(pathName: string) {
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT k.capability_code, k.capability, k.sub_capability, k.type,
+      `SELECT k.id, k.capability_code, k.capability, k.sub_capability, k.type,
               s.definition
        FROM key_data k
        LEFT JOIN special_requirements s ON k.capability_code = s.capability_code
        WHERE k.path = ?
-       ORDER BY k.capability, k.type`
+       ORDER BY k.id`
     )
     .all(pathName) as {
+    id: number;
     capability_code: string;
     capability: string;
     sub_capability: string;
@@ -422,27 +492,54 @@ export function getCapabilitiesByPath(pathName: string) {
   }[];
   db.close();
 
-  const grouped: Record<
-    string,
-    {
-      capability: string;
-      types: { capability_code: string; type: string; sub_capability: string; definition: string }[];
-    }
-  > = {};
+  type TypeItem = {
+    capability_code: string;
+    type: string;
+    definition: string;
+  };
+  type SubCapability = {
+    sub_capability: string;
+    types: TypeItem[];
+  };
+  type CapabilityGroup = {
+    capability: string;
+    subCapabilities: SubCapability[];
+    typesCount: number;
+  };
+
+  const capMap = new Map<string, CapabilityGroup>();
+  const subMap = new Map<string, SubCapability>();
 
   for (const row of rows) {
-    if (!grouped[row.capability]) {
-      grouped[row.capability] = { capability: row.capability, types: [] };
+    if (!capMap.has(row.capability)) {
+      capMap.set(row.capability, {
+        capability: row.capability,
+        subCapabilities: [],
+        typesCount: 0,
+      });
     }
-    grouped[row.capability].types.push({
+    const cap = capMap.get(row.capability)!;
+
+    const subKey = `${row.capability}|||${row.sub_capability}`;
+    if (!subMap.has(subKey)) {
+      const sub: SubCapability = {
+        sub_capability: row.sub_capability,
+        types: [],
+      };
+      subMap.set(subKey, sub);
+      cap.subCapabilities.push(sub);
+    }
+    const sub = subMap.get(subKey)!;
+
+    sub.types.push({
       capability_code: row.capability_code,
       type: row.type,
-      sub_capability: row.sub_capability,
       definition: row.definition,
     });
+    cap.typesCount++;
   }
 
-  return Object.values(grouped);
+  return Array.from(capMap.values());
 }
 
 export function getTypeDetails(capabilityCode: string) {

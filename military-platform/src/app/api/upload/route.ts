@@ -7,6 +7,7 @@ import {
   insertGeneralRequirements,
   rebuildSearchIndex,
   addLog,
+  setDataSource,
 } from "@/lib/db";
 import { parseExcelBuffer } from "@/lib/excel";
 
@@ -35,6 +36,7 @@ export async function POST(request: NextRequest) {
     if (generalData.length > 0) insertGeneralRequirements(generalData);
 
     rebuildSearchIndex();
+    setDataSource("upload", file.name);
 
     const summary = `تم رفع الملف "${file.name}" - الأوراق: ${sheetNames.join(", ")} - البيانات الأساسية: ${keyData.length} صف، المتطلبات الخاصة: ${specialData.length} صف، المتطلبات العامة: ${generalData.length} صف`;
     addLog("رفع ملف", summary);
