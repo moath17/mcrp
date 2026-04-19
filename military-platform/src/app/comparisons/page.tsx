@@ -10,6 +10,21 @@ import {
   Inbox,
   ChevronDown,
   Check,
+  FileText,
+  Cpu,
+  Wallet,
+  Globe,
+  GraduationCap,
+  Shield,
+  Users,
+  FlaskConical,
+  Package,
+  Network,
+  Swords,
+  Calendar,
+  Layers,
+  Crosshair,
+  type LucideIcon,
 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 
@@ -47,28 +62,84 @@ interface CodeAggregate {
 
 type CompanyRow = Record<string, string> & { key: Record<string, string> };
 
-const FIELDS: { key: string; label: string }[] = [
-  { key: "capability_name", label: "اسم القدرة" },
-  { key: "scope_definition", label: "نطاق التعريف للقدرة" },
-  { key: "development_history", label: "تاريخ التطوير" },
-  { key: "armament", label: "التسليح والذخائر" },
-  { key: "cost", label: "تكلفة القدرة" },
-  { key: "family", label: "عائلة القدرة والأنواع المتاحة" },
-  { key: "technical_specs", label: "المواصفات الفنية" },
-  { key: "countries_used", label: "الدول والقوات المستخدمة" },
-  { key: "training_requirements", label: "متطلبات التدريب" },
-  { key: "localization_status", label: "حالة التوطين" },
-  { key: "system_formation", label: "تشكيل المنظومة" },
-  { key: "factory_tests", label: "الاختبارات المصنعية" },
-  { key: "storage_requirements", label: "متطلبات التخزين والاستدامة" },
-  { key: "sub_systems", label: "الأنظمة الفرعية المرتبطة" },
-  { key: "conflict_participation", label: "مشاركة القدرة في النزاعات" },
+interface FieldDef {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface FieldGroup {
+  title: string;
+  icon: LucideIcon;
+  color: string;
+  fields: FieldDef[];
+}
+
+const FIELD_GROUPS: FieldGroup[] = [
+  {
+    title: "التعريف والنظرة العامة",
+    icon: FileText,
+    color: "from-blue-500/30 to-cyan-500/20",
+    fields: [
+      { key: "capability_name", label: "اسم القدرة", icon: Crosshair },
+      { key: "scope_definition", label: "نطاق التعريف للقدرة", icon: FileText },
+      { key: "development_history", label: "تاريخ التطوير", icon: Calendar },
+      { key: "family", label: "عائلة القدرة والأنواع المتاحة", icon: Layers },
+    ],
+  },
+  {
+    title: "المواصفات الفنية والتسليح",
+    icon: Cpu,
+    color: "from-purple-500/30 to-pink-500/20",
+    fields: [
+      { key: "technical_specs", label: "المواصفات الفنية", icon: Cpu },
+      { key: "armament", label: "التسليح والذخائر", icon: Crosshair },
+      { key: "sub_systems", label: "الأنظمة الفرعية المرتبطة", icon: Network },
+    ],
+  },
+  {
+    title: "التكلفة والتوطين",
+    icon: Wallet,
+    color: "from-amber-500/30 to-orange-500/20",
+    fields: [
+      { key: "cost", label: "تكلفة القدرة", icon: Wallet },
+      { key: "localization_status", label: "حالة التوطين", icon: Shield },
+    ],
+  },
+  {
+    title: "الاستخدام والتدريب",
+    icon: Users,
+    color: "from-emerald-500/30 to-teal-500/20",
+    fields: [
+      { key: "countries_used", label: "الدول والقوات المستخدمة", icon: Globe },
+      { key: "system_formation", label: "تشكيل المنظومة", icon: Users },
+      { key: "training_requirements", label: "متطلبات التدريب", icon: GraduationCap },
+    ],
+  },
+  {
+    title: "الاختبارات والتخزين والنزاعات",
+    icon: FlaskConical,
+    color: "from-rose-500/30 to-red-500/20",
+    fields: [
+      { key: "factory_tests", label: "الاختبارات المصنعية", icon: FlaskConical },
+      { key: "storage_requirements", label: "متطلبات التخزين والاستدامة", icon: Package },
+      { key: "conflict_participation", label: "مشاركة القدرة في النزاعات", icon: Swords },
+    ],
+  },
 ];
 
-const COMPANY_FIELDS: { key: string; label: string }[] = [
-  { key: "company_name", label: "اسم الشركة" },
-  { key: "company_info", label: "تعريف بالشركة" },
-  ...FIELDS,
+// Flat list for company-level comparison (includes company-specific fields at top)
+const COMPANY_FIELD_GROUPS: FieldGroup[] = [
+  {
+    title: "بيانات الشركة",
+    icon: Building2,
+    color: "from-indigo-500/30 to-blue-500/20",
+    fields: [
+      { key: "company_name", label: "اسم الشركة", icon: Building2 },
+      { key: "company_info", label: "تعريف بالشركة", icon: FileText },
+    ],
+  },
+  ...FIELD_GROUPS,
 ];
 
 
@@ -344,54 +415,35 @@ function CodeVsCodeMode({
       </div>
 
       {aggA && aggB && (
-        <ComparisonTable
-          headerA={
-            <CodeHeader code={aggA.key.capability_code} title={aggA.key.type || aggA.key.capability} subtitle={`${aggA.key.path} • ${aggA.key.capability}`} count={aggA.company_count} />
-          }
-          headerB={
-            <CodeHeader code={aggB.key.capability_code} title={aggB.key.type || aggB.key.capability} subtitle={`${aggB.key.path} • ${aggB.key.capability}`} count={aggB.company_count} />
-          }
-          rows={[
-            {
-              label: "المسار",
-              valueA: aggA.key.path,
-              valueB: aggB.key.path,
-            },
-            {
-              label: "القدرة",
-              valueA: aggA.key.capability,
-              valueB: aggB.key.capability,
-            },
-            {
-              label: "القدرة الفرعية",
-              valueA: aggA.key.sub_capability,
-              valueB: aggB.key.sub_capability,
-            },
-            {
-              label: "النوع",
-              valueA: aggA.key.type,
-              valueB: aggB.key.type,
-            },
-            {
-              label: "عدد الشركات الموردة",
-              valueA: String(aggA.company_count),
-              valueB: String(aggB.company_count),
-            },
-            {
-              label: "الشركات",
-              valueA: aggA.companies.join("، "),
-              valueB: aggB.companies.join("، "),
-            },
-            ...FIELDS.map((f) => ({
-              label: f.label,
-              valueA: (aggA as unknown as Record<string, string>)[f.key] || "",
-              valueB: (aggB as unknown as Record<string, string>)[f.key] || "",
-            })),
-          ]}
-        />
+        <div className="space-y-6">
+          <CodeHeroVS aggA={aggA} aggB={aggB} />
+          <ComparisonGroups
+            data={[
+              {
+                title: "هوية القدرة",
+                icon: Hash,
+                color: "from-accent/30 to-accent2/20",
+                fields: [
+                  { key: "path", label: "المسار", icon: Globe },
+                  { key: "capability", label: "القدرة", icon: Layers },
+                  { key: "sub_capability", label: "القدرة الفرعية", icon: Network },
+                  { key: "type", label: "النوع", icon: Crosshair },
+                ],
+              },
+              ...FIELD_GROUPS,
+            ]}
+            valueA={(k) => extractCodeField(aggA, k)}
+            valueB={(k) => extractCodeField(aggB, k)}
+          />
+        </div>
       )}
     </>
   );
+}
+
+function extractCodeField(agg: CodeAggregate, key: string): string {
+  if (key in agg.key) return agg.key[key] || "";
+  return (agg as unknown as Record<string, string>)[key] || "";
 }
 
 /* -------- Mode 2 -------- */
@@ -492,27 +544,14 @@ function CompanyVsCompanyMode({
       </div>
 
       {rowA && rowB && (
-        <ComparisonTable
-          headerA={
-            <CompanyHeader
-              company={rowA.company_name}
-              code={rowA.key.capability_code}
-              type={rowA.key.type}
-            />
-          }
-          headerB={
-            <CompanyHeader
-              company={rowB.company_name}
-              code={rowB.key.capability_code}
-              type={rowB.key.type}
-            />
-          }
-          rows={COMPANY_FIELDS.map((f) => ({
-            label: f.label,
-            valueA: rowA[f.key] || "",
-            valueB: rowB[f.key] || "",
-          }))}
-        />
+        <div className="space-y-6">
+          <CompanyHeroVS rowA={rowA} rowB={rowB} />
+          <ComparisonGroups
+            data={COMPANY_FIELD_GROUPS}
+            valueA={(k) => rowA[k] || ""}
+            valueB={(k) => rowB[k] || ""}
+          />
+        </div>
       )}
     </>
   );
@@ -687,98 +726,263 @@ function CompanySelect({
   );
 }
 
-function CodeHeader({
-  code,
+/* -------- VS Hero (Code mode) -------- */
+
+function CodeHeroVS({ aggA, aggB }: { aggA: CodeAggregate; aggB: CodeAggregate }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch">
+      <SubjectCard
+        side="A"
+        gradient="from-blue-600 via-blue-700 to-cyan-800"
+        title={aggA.key.type || aggA.key.capability}
+        subtitle={`${aggA.key.path} • ${aggA.key.capability}`}
+        code={aggA.key.capability_code}
+        badges={[
+          { label: `${aggA.company_count} شركة موردة`, icon: Building2 },
+          { label: aggA.key.sub_capability, icon: Network },
+        ]}
+        icon={Crosshair}
+      />
+      <VSDivider />
+      <SubjectCard
+        side="B"
+        gradient="from-purple-600 via-purple-700 to-pink-800"
+        title={aggB.key.type || aggB.key.capability}
+        subtitle={`${aggB.key.path} • ${aggB.key.capability}`}
+        code={aggB.key.capability_code}
+        badges={[
+          { label: `${aggB.company_count} شركة موردة`, icon: Building2 },
+          { label: aggB.key.sub_capability, icon: Network },
+        ]}
+        icon={Crosshair}
+      />
+    </div>
+  );
+}
+
+function CompanyHeroVS({ rowA, rowB }: { rowA: CompanyRow; rowB: CompanyRow }) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-stretch">
+      <SubjectCard
+        side="A"
+        gradient="from-emerald-600 via-teal-700 to-cyan-800"
+        title={rowA.company_name}
+        subtitle={rowA.key.type}
+        code={rowA.key.capability_code}
+        badges={[
+          { label: rowA.localization_status || "—", icon: Shield },
+          { label: rowA.cost || "—", icon: Wallet },
+        ]}
+        icon={Building2}
+      />
+      <VSDivider />
+      <SubjectCard
+        side="B"
+        gradient="from-orange-600 via-amber-700 to-red-800"
+        title={rowB.company_name}
+        subtitle={rowB.key.type}
+        code={rowB.key.capability_code}
+        badges={[
+          { label: rowB.localization_status || "—", icon: Shield },
+          { label: rowB.cost || "—", icon: Wallet },
+        ]}
+        icon={Building2}
+      />
+    </div>
+  );
+}
+
+function SubjectCard({
+  side,
+  gradient,
   title,
   subtitle,
-  count,
+  code,
+  badges,
+  icon: Icon,
 }: {
-  code: string;
+  side: "A" | "B";
+  gradient: string;
   title: string;
   subtitle: string;
-  count: number;
-}) {
-  return (
-    <div className="space-y-1">
-      <div className="text-[10px] font-mono text-accent-light/70">{code}</div>
-      <div className="text-base font-bold text-text">{title}</div>
-      <div className="text-[11px] text-text-muted">{subtitle}</div>
-      <div className="inline-block text-[10px] px-2 py-0.5 rounded-md bg-accent-soft/40 text-accent-light border border-accent/20 mt-1">
-        {count} شركة موردة
-      </div>
-    </div>
-  );
-}
-
-function CompanyHeader({
-  company,
-  code,
-  type,
-}: {
-  company: string;
   code: string;
-  type: string;
+  badges: { label: string; icon: LucideIcon }[];
+  icon: LucideIcon;
 }) {
   return (
-    <div className="space-y-1">
-      <div className="text-base font-bold text-text">{company}</div>
-      <div className="text-[11px] text-text-muted">{type}</div>
-      <div className="text-[10px] font-mono text-accent-light/70 mt-1">{code}</div>
-    </div>
-  );
-}
-
-function ComparisonTable({
-  headerA,
-  headerB,
-  rows,
-}: {
-  headerA: React.ReactNode;
-  headerB: React.ReactNode;
-  rows: { label: string; valueA: string; valueB: string }[];
-}) {
-  return (
-    <div className="glass-panel rounded-2xl overflow-hidden">
-      <div className="grid grid-cols-[160px_1fr_1fr] border-b border-line bg-glass">
-        <div className="px-4 py-4 text-xs font-medium text-text-muted">الحقل</div>
-        <div className="px-4 py-4 border-r border-line">{headerA}</div>
-        <div className="px-4 py-4 border-r border-line">{headerB}</div>
-      </div>
-      {rows.map((row, i) => {
-        const same = row.valueA && row.valueB && row.valueA === row.valueB;
-        return (
-          <div
-            key={i}
-            className={`grid grid-cols-[160px_1fr_1fr] border-b border-line/40 ${
-              same ? "bg-accent-soft/10" : ""
-            }`}
-          >
-            <div className="px-4 py-3 text-xs font-bold text-text-muted bg-glass/40">
-              {row.label}
-            </div>
-            <CompareCell value={row.valueA} other={row.valueB} />
-            <CompareCell value={row.valueB} other={row.valueA} />
+    <div className={`relative rounded-2xl overflow-hidden bg-gradient-to-br ${gradient} p-5 shadow-xl`}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.18),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(0,0,0,0.25),transparent_60%)]" />
+      <div className="relative">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/20">
+            <Icon size={24} className="text-white" />
           </div>
-        );
-      })}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black text-white/80 px-2 py-0.5 rounded-md bg-white/20 backdrop-blur-sm">
+                {side}
+              </span>
+              <span className="text-[10px] font-mono text-white/80 truncate">{code}</span>
+            </div>
+            <h3 className="text-lg font-black text-white mt-1.5 leading-tight">{title}</h3>
+            <p className="text-[11px] text-white/75 mt-0.5 truncate">{subtitle}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-4">
+          {badges.map((b, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1.5 text-[11px] font-medium text-white px-2.5 py-1 rounded-lg bg-black/25 backdrop-blur-sm border border-white/15"
+            >
+              <b.icon size={12} />
+              {b.label}
+            </span>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
 
-function CompareCell({ value, other }: { value: string; other: string }) {
-  const empty = !value || value.trim() === "";
-  const sameAsOther = !empty && value === other;
+function VSDivider() {
   return (
-    <div
-      className={`px-4 py-3 text-sm leading-relaxed border-r border-line/40 whitespace-pre-wrap break-words ${
-        empty
-          ? "text-text-muted/40 italic"
-          : sameAsOther
-          ? "text-text"
-          : "text-text"
-      }`}
-    >
-      {empty ? "—" : value}
+    <div className="flex items-center justify-center md:py-0 py-2">
+      <div className="relative w-12 h-12 rounded-full bg-bg-card border-2 border-accent/40 flex items-center justify-center shadow-lg">
+        <span className="text-xs font-black text-accent-light">VS</span>
+        <div className="absolute inset-0 rounded-full bg-accent/20 animate-ping opacity-40" />
+      </div>
+    </div>
+  );
+}
+
+/* -------- Comparison Groups -------- */
+
+function ComparisonGroups({
+  data,
+  valueA,
+  valueB,
+}: {
+  data: FieldGroup[];
+  valueA: (key: string) => string;
+  valueB: (key: string) => string;
+}) {
+  return (
+    <div className="space-y-5">
+      {data.map((group) => (
+        <ComparisonGroup
+          key={group.title}
+          group={group}
+          valueA={valueA}
+          valueB={valueB}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ComparisonGroup({
+  group,
+  valueA,
+  valueB,
+}: {
+  group: FieldGroup;
+  valueA: (key: string) => string;
+  valueB: (key: string) => string;
+}) {
+  const GroupIcon = group.icon;
+  return (
+    <section className="rounded-2xl overflow-hidden border border-line bg-bg-soft">
+      {/* Group header */}
+      <div className={`flex items-center gap-3 px-5 py-3.5 bg-gradient-to-l ${group.color} border-b border-line/60`}>
+        <div className="w-9 h-9 rounded-xl bg-bg-card/70 backdrop-blur-sm flex items-center justify-center border border-white/10">
+          <GroupIcon size={18} className="text-text" />
+        </div>
+        <h3 className="text-sm font-black text-text">{group.title}</h3>
+      </div>
+
+      {/* Fields */}
+      <div className="p-4 space-y-3">
+        {group.fields.map((field) => {
+          const a = valueA(field.key);
+          const b = valueB(field.key);
+          return (
+            <FieldComparison
+              key={field.key}
+              field={field}
+              valueA={a}
+              valueB={b}
+            />
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function FieldComparison({
+  field,
+  valueA,
+  valueB,
+}: {
+  field: FieldDef;
+  valueA: string;
+  valueB: string;
+}) {
+  const FieldIcon = field.icon;
+  const aEmpty = !valueA || valueA.trim() === "";
+  const bEmpty = !valueB || valueB.trim() === "";
+  const same = !aEmpty && !bEmpty && valueA.trim() === valueB.trim();
+
+  return (
+    <div className="rounded-xl bg-bg-card/40 border border-line/60 overflow-hidden">
+      {/* Field label header */}
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-glass/60 border-b border-line/50">
+        <div className="flex items-center gap-2">
+          <FieldIcon size={14} className="text-accent-light/80" />
+          <span className="text-xs font-bold text-text">{field.label}</span>
+        </div>
+        {same ? (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30">
+            <Check size={10} />
+            متطابق
+          </span>
+        ) : aEmpty || bEmpty ? null : (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+            مختلف
+          </span>
+        )}
+      </div>
+
+      {/* Two values */}
+      <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-line/40">
+        <ValueBlock value={valueA} side="A" />
+        <ValueBlock value={valueB} side="B" />
+      </div>
+    </div>
+  );
+}
+
+function ValueBlock({ value, side }: { value: string; side: "A" | "B" }) {
+  const empty = !value || value.trim() === "";
+  const badgeStyle =
+    side === "A"
+      ? "bg-blue-500/15 text-blue-300 border-blue-500/40"
+      : "bg-purple-500/15 text-purple-300 border-purple-500/40";
+  return (
+    <div className="px-4 py-3">
+      <div
+        className={`inline-flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-black border mb-2.5 ${badgeStyle}`}
+      >
+        {side}
+      </div>
+      {empty ? (
+        <p className="text-xs text-text-muted/40 italic">لا توجد بيانات</p>
+      ) : (
+        <p className="text-sm text-text leading-relaxed whitespace-pre-wrap break-words">
+          {value}
+        </p>
+      )}
     </div>
   );
 }
