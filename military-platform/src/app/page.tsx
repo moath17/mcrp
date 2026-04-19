@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { Layers, Database, Search as SearchIcon } from "lucide-react";
 import { MILITARY_PATHS } from "@/lib/paths-config";
 
 export default function HomePage() {
@@ -38,13 +39,44 @@ export default function HomePage() {
       {/* Main Container */}
       <main className="max-w-[1240px] mx-auto px-4 py-5 pb-12">
         {/* Hero */}
-        <section className="text-center py-8 px-2.5">
-          <h1 className="text-[34px] font-black m-0">10 مسارات عسكرية</h1>
-          <p className="mt-3 text-text-muted leading-relaxed">
-            اختر أحد المسارات للدخول إلى التفاصيل.
+        <section className="text-center py-10 px-2.5">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-accent/30 bg-accent-soft/40 text-[11px] text-accent-light mb-4">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-light animate-pulse" />
+            منصة داخلية — وزارة الحرس الوطني
+          </div>
+          <h1 className="text-[36px] sm:text-[42px] font-black m-0 leading-tight">
+            موسوعة القدرات العسكرية
+          </h1>
+          <p className="mt-4 text-text-muted leading-relaxed max-w-[760px] mx-auto text-[15px]">
+            منصة مرجعية شاملة تجمع وتنظّم بيانات القدرات العسكرية ضمن
+            <span className="text-accent-light font-bold"> 10 مسارات </span>
+            رئيسية، مع تفاصيل لكل قدرة من المتطلبات التشغيلية والمواصفات الفنية
+            والشركات المصنّعة وحالة التوطين، لتمكين الباحثين وصنّاع القرار من
+            استعراض القدرات ومقارنتها بسهولة.
           </p>
 
-          <div className="mt-5 mx-auto flex gap-2.5 w-[min(650px,100%)] p-2.5 rounded-full border border-line bg-glass">
+          {/* Quick stats */}
+          <div className="mt-7 grid grid-cols-3 gap-3 max-w-[640px] mx-auto">
+            <div className="rounded-2xl border border-line bg-glass px-3 py-4">
+              <Layers size={18} className="mx-auto text-accent-light mb-1.5" />
+              <div className="text-xl font-black text-text">{MILITARY_PATHS.length}</div>
+              <div className="text-[11px] text-text-muted mt-0.5">مسارات</div>
+            </div>
+            <div className="rounded-2xl border border-line bg-glass px-3 py-4">
+              <Database size={18} className="mx-auto text-accent-light mb-1.5" />
+              <div className="text-xl font-black text-text">
+                {MILITARY_PATHS.reduce((sum, p) => sum + p.capabilityCount, 0)}+
+              </div>
+              <div className="text-[11px] text-text-muted mt-0.5">قدرات مفهرسة</div>
+            </div>
+            <div className="rounded-2xl border border-line bg-glass px-3 py-4">
+              <SearchIcon size={18} className="mx-auto text-accent-light mb-1.5" />
+              <div className="text-xl font-black text-text">بحث ذكي</div>
+              <div className="text-[11px] text-text-muted mt-0.5">داخل الموسوعة</div>
+            </div>
+          </div>
+
+          <div className="mt-7 mx-auto flex gap-2.5 w-[min(650px,100%)] p-2.5 rounded-full border border-line bg-glass">
             <input
               type="search"
               placeholder="ابحث عن مسار…"
@@ -61,8 +93,15 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Section heading */}
+        <div className="flex items-center gap-3 mt-2 mb-5 px-1">
+          <div className="h-[2px] flex-1 bg-gradient-to-l from-accent/40 to-transparent" />
+          <h2 className="text-base font-bold text-text">المسارات العشرة</h2>
+          <div className="h-[2px] flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
+        </div>
+
         {/* Grid */}
-        <section className="mt-6 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-[18px]">
+        <section className="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-[18px]">
           {filtered.map((path) => (
             <Link
               key={path.name}

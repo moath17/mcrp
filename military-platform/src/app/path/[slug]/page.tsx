@@ -165,7 +165,7 @@ export default function PathPage() {
                               نوع {idx + 1}
                             </div>
                             <div className="text-sm font-bold text-text group-hover:text-accent-light transition-colors">
-                              {t.type || t.capability_code}
+                              {t.type || t.sub_capability || `نوع ${idx + 1}`}
                             </div>
                             {t.sub_capability && (
                               <div className="text-xs text-text-muted mt-1 line-clamp-1">

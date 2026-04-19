@@ -11,8 +11,6 @@ import {
   Building2,
   MapPin,
   Factory,
-  Hash,
-  Tag,
 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 import SubElementsTree from "@/components/SubElementsTree";
@@ -45,10 +43,9 @@ interface SectionProps {
   icon: React.ReactNode;
   title: string;
   children: React.ReactNode;
-  colNumber: number;
 }
 
-function Section({ icon, title, children, colNumber }: SectionProps) {
+function Section({ icon, title, children }: SectionProps) {
   return (
     <div className="glass-panel rounded-2xl p-6">
       <div className="flex items-center gap-3 mb-4">
@@ -58,9 +55,6 @@ function Section({ icon, title, children, colNumber }: SectionProps) {
         <div className="flex-1">
           <h2 className="text-lg font-bold text-text">{title}</h2>
         </div>
-        <span className="text-[10px] text-text-muted/50 px-2 py-0.5 rounded bg-glass border border-line">
-          عمود {colNumber}
-        </span>
       </div>
       <div className="pr-2 sm:pr-[52px]">{children}</div>
     </div>
@@ -107,7 +101,7 @@ export default function TypeDetailPage() {
         <Breadcrumb
           items={[
             { label: pathConfig?.name || slug, href: `/path/${encodeURIComponent(slug)}` },
-            { label: code },
+            { label: "تفاصيل النوع" },
           ]}
         />
         <div className="glass-panel rounded-2xl p-12 text-center">
@@ -121,26 +115,9 @@ export default function TypeDetailPage() {
 
   const specialFields = [
     {
-      key: "capability_code",
-      title: "رمز القدرة",
-      icon: <Hash size={20} className="text-accent-light" />,
-      col: 1,
-      value: special?.capability_code || key.capability_code,
-      type: "text" as const,
-    },
-    {
-      key: "type",
-      title: "النوع",
-      icon: <Tag size={20} className="text-accent-light" />,
-      col: 2,
-      value: special?.type || key.type,
-      type: "text" as const,
-    },
-    {
       key: "definition",
       title: "تعريف القدرة",
       icon: <FileText size={20} className="text-accent-light" />,
-      col: 3,
       value: special?.definition || "",
       type: "paragraph" as const,
     },
@@ -148,7 +125,6 @@ export default function TypeDetailPage() {
       key: "operational_requirements",
       title: "المتطلبات العملياتية",
       icon: <Target size={20} className="text-accent-light" />,
-      col: 4,
       value: special?.operational_requirements || "",
       type: "paragraph" as const,
     },
@@ -156,7 +132,6 @@ export default function TypeDetailPage() {
       key: "scenarios",
       title: "سيناريوهات ومتطلبات التجارب",
       icon: <FlaskConical size={20} className="text-accent-light" />,
-      col: 5,
       value: special?.scenarios || "",
       type: "paragraph" as const,
     },
@@ -164,7 +139,6 @@ export default function TypeDetailPage() {
       key: "sub_elements",
       title: "العناصر الفرعية المكونة للقدرة",
       icon: <Network size={20} className="text-accent-light" />,
-      col: 6,
       value: special?.sub_elements || "",
       type: "tree" as const,
     },
@@ -172,7 +146,6 @@ export default function TypeDetailPage() {
       key: "units_used",
       title: "الوحدات المستخدمة للقدرة",
       icon: <Building2 size={20} className="text-accent-light" />,
-      col: 7,
       value: special?.units_used || "",
       type: "units" as const,
     },
@@ -180,7 +153,6 @@ export default function TypeDetailPage() {
       key: "local_entities",
       title: "الجهات المحلية المستخدمة للقدرة",
       icon: <MapPin size={20} className="text-accent-light" />,
-      col: 8,
       value: special?.local_entities || "",
       type: "paragraph" as const,
     },
@@ -188,7 +160,6 @@ export default function TypeDetailPage() {
       key: "manufacturers",
       title: "الشركات المصنعة للقدرة (العالمية)",
       icon: <Factory size={20} className="text-accent-light" />,
-      col: 9,
       value: special?.manufacturers || "",
       type: "paragraph" as const,
     },
@@ -199,7 +170,7 @@ export default function TypeDetailPage() {
       <Breadcrumb
         items={[
           { label: pathConfig?.name || slug, href: `/path/${encodeURIComponent(slug)}` },
-          { label: key.type || key.capability_code },
+          { label: key.type || key.sub_capability || key.capability || "تفاصيل النوع" },
         ]}
       />
 
@@ -211,7 +182,7 @@ export default function TypeDetailPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black text-text">
-              {key.type || key.capability_code}
+              {key.type || key.sub_capability || key.capability || "تفاصيل النوع"}
             </h1>
             <div className="flex flex-wrap gap-3 mt-2">
               {key.capability && (
@@ -224,30 +195,21 @@ export default function TypeDetailPage() {
                   {key.sub_capability}
                 </span>
               )}
-              <span className="text-xs px-3 py-1 rounded-full bg-glass text-text-muted border border-line">
-                {key.capability_code}
-              </span>
             </div>
-            <p className="text-xs text-text-muted/60 mt-3">
-              نموذج عام - متطلب خاص &bull; {specialFields.length} أعمدة
-            </p>
           </div>
         </div>
       </div>
 
-      {/* All 9 Special Requirements columns */}
+      {/* Special Requirements sections */}
       <div className="space-y-4">
         {specialFields.map((field) => (
           <Section
             key={field.key}
             icon={field.icon}
             title={field.title}
-            colNumber={field.col}
           >
             {!field.value || field.value.trim() === "" ? (
               <EmptyField />
-            ) : field.type === "text" ? (
-              <p className="text-sm text-text font-medium">{field.value}</p>
             ) : field.type === "paragraph" ? (
               <p className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">
                 {field.value}
