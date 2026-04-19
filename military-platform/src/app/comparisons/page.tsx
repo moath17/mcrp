@@ -43,24 +43,14 @@ interface CodeAggregate {
   key: Record<string, string>;
   company_count: number;
   companies: string[];
-  capability_name: string;
-  scope_definition: string;
-  development_history: string;
-  armament: string;
-  cost: string;
-  family: string;
-  technical_specs: string;
-  countries_used: string;
-  training_requirements: string;
-  localization_status: string;
-  system_formation: string;
-  factory_tests: string;
-  storage_requirements: string;
-  sub_systems: string;
-  conflict_participation: string;
+  companyRows: Record<string, string>[];
 }
 
 type CompanyRow = Record<string, string> & { key: Record<string, string> };
+
+type FieldValue =
+  | { kind: "single"; value: string }
+  | { kind: "perCompany"; entries: { company: string; value: string }[] };
 
 interface FieldDef {
   key: string;
@@ -418,20 +408,7 @@ function CodeVsCodeMode({
         <div className="space-y-6">
           <CodeHeroVS aggA={aggA} aggB={aggB} />
           <ComparisonGroups
-            data={[
-              {
-                title: "هوية القدرة",
-                icon: Hash,
-                color: "from-accent/30 to-accent2/20",
-                fields: [
-                  { key: "path", label: "المسار", icon: Globe },
-                  { key: "capability", label: "القدرة", icon: Layers },
-                  { key: "sub_capability", label: "القدرة الفرعية", icon: Network },
-                  { key: "type", label: "النوع", icon: Crosshair },
-                ],
-              },
-              ...FIELD_GROUPS,
-            ]}
+            data={FIELD_GROUPS}
             valueA={(k) => extractCodeField(aggA, k)}
             valueB={(k) => extractCodeField(aggB, k)}
           />
@@ -441,9 +418,15 @@ function CodeVsCodeMode({
   );
 }
 
-function extractCodeField(agg: CodeAggregate, key: string): string {
-  if (key in agg.key) return agg.key[key] || "";
-  return (agg as unknown as Record<string, string>)[key] || "";
+function extractCodeField(agg: CodeAggregate, key: string): FieldValue {
+  if (key in agg.key) {
+    return { kind: "single", value: agg.key[key] || "" };
+  }
+  const entries = agg.companyRows.map((r) => ({
+    company: r.company_name || "غير محدد",
+    value: r[key] || "",
+  }));
+  return { kind: "perCompany", entries };
 }
 
 /* -------- Mode 2 -------- */
@@ -548,8 +531,8 @@ function CompanyVsCompanyMode({
           <CompanyHeroVS rowA={rowA} rowB={rowB} />
           <ComparisonGroups
             data={COMPANY_FIELD_GROUPS}
-            valueA={(k) => rowA[k] || ""}
-            valueB={(k) => rowB[k] || ""}
+            valueA={(k) => ({ kind: "single", value: rowA[k] || "" })}
+            valueB={(k) => ({ kind: "single", value: rowB[k] || "" })}
           />
         </div>
       )}
@@ -739,7 +722,7 @@ function CodeHeroVS({ aggA, aggB }: { aggA: CodeAggregate; aggB: CodeAggregate }
         code={aggA.key.capability_code}
         badges={[
           { label: `${aggA.company_count} شركة موردة`, icon: Building2 },
-          { label: aggA.key.sub_capability, icon: Network },
+          { label: aggA.key.sub_capability || "—", icon: Network },
         ]}
         icon={Crosshair}
       />
@@ -752,7 +735,7 @@ function CodeHeroVS({ aggA, aggB }: { aggA: CodeAggregate; aggB: CodeAggregate }
         code={aggB.key.capability_code}
         badges={[
           { label: `${aggB.company_count} شركة موردة`, icon: Building2 },
-          { label: aggB.key.sub_capability, icon: Network },
+          { label: aggB.key.sub_capability || "—", icon: Network },
         ]}
         icon={Crosshair}
       />
@@ -864,8 +847,8 @@ function ComparisonGroups({
   valueB,
 }: {
   data: FieldGroup[];
-  valueA: (key: string) => string;
-  valueB: (key: string) => string;
+  valueA: (key: string) => FieldValue;
+  valueB: (key: string) => FieldValue;
 }) {
   return (
     <div className="space-y-5">
@@ -887,8 +870,8 @@ function ComparisonGroup({
   valueB,
 }: {
   group: FieldGroup;
-  valueA: (key: string) => string;
-  valueB: (key: string) => string;
+  valueA: (key: string) => FieldValue;
+  valueB: (key: string) => FieldValue;
 }) {
   const GroupIcon = group.icon;
   return (
@@ -903,21 +886,29 @@ function ComparisonGroup({
 
       {/* Fields */}
       <div className="p-4 space-y-3">
-        {group.fields.map((field) => {
-          const a = valueA(field.key);
-          const b = valueB(field.key);
-          return (
-            <FieldComparison
-              key={field.key}
-              field={field}
-              valueA={a}
-              valueB={b}
-            />
-          );
-        })}
+        {group.fields.map((field) => (
+          <FieldComparison
+            key={field.key}
+            field={field}
+            valueA={valueA(field.key)}
+            valueB={valueB(field.key)}
+          />
+        ))}
       </div>
     </section>
   );
+}
+
+function flattenValue(v: FieldValue): string {
+  if (v.kind === "single") return (v.value || "").trim();
+  return v.entries
+    .map((e) => `${e.company}|||${(e.value || "").trim()}`)
+    .join("###");
+}
+
+function isValueEmpty(v: FieldValue): boolean {
+  if (v.kind === "single") return !v.value || v.value.trim() === "";
+  return v.entries.every((e) => !e.value || e.value.trim() === "");
 }
 
 function FieldComparison({
@@ -926,13 +917,13 @@ function FieldComparison({
   valueB,
 }: {
   field: FieldDef;
-  valueA: string;
-  valueB: string;
+  valueA: FieldValue;
+  valueB: FieldValue;
 }) {
   const FieldIcon = field.icon;
-  const aEmpty = !valueA || valueA.trim() === "";
-  const bEmpty = !valueB || valueB.trim() === "";
-  const same = !aEmpty && !bEmpty && valueA.trim() === valueB.trim();
+  const aEmpty = isValueEmpty(valueA);
+  const bEmpty = isValueEmpty(valueB);
+  const same = !aEmpty && !bEmpty && flattenValue(valueA) === flattenValue(valueB);
 
   return (
     <div className="rounded-xl bg-bg-card/40 border border-line/60 overflow-hidden">
@@ -963,12 +954,13 @@ function FieldComparison({
   );
 }
 
-function ValueBlock({ value, side }: { value: string; side: "A" | "B" }) {
-  const empty = !value || value.trim() === "";
+function ValueBlock({ value, side }: { value: FieldValue; side: "A" | "B" }) {
+  const empty = isValueEmpty(value);
   const badgeStyle =
     side === "A"
       ? "bg-blue-500/15 text-blue-300 border-blue-500/40"
       : "bg-purple-500/15 text-purple-300 border-purple-500/40";
+
   return (
     <div className="px-4 py-3">
       <div
@@ -976,13 +968,55 @@ function ValueBlock({ value, side }: { value: string; side: "A" | "B" }) {
       >
         {side}
       </div>
+
       {empty ? (
         <p className="text-xs text-text-muted/40 italic">لا توجد بيانات</p>
-      ) : (
+      ) : value.kind === "single" ? (
         <p className="text-sm text-text leading-relaxed whitespace-pre-wrap break-words">
-          {value}
+          {value.value}
         </p>
+      ) : (
+        <PerCompanyList entries={value.entries} side={side} />
       )}
     </div>
+  );
+}
+
+function PerCompanyList({
+  entries,
+  side,
+}: {
+  entries: { company: string; value: string }[];
+  side: "A" | "B";
+}) {
+  const tagStyle =
+    side === "A"
+      ? "bg-blue-500/10 text-blue-300 border-blue-500/30"
+      : "bg-purple-500/10 text-purple-300 border-purple-500/30";
+
+  const valid = entries.filter((e) => e.value && e.value.trim() !== "");
+  if (valid.length === 0) {
+    return <p className="text-xs text-text-muted/40 italic">لا توجد بيانات</p>;
+  }
+
+  return (
+    <ul className="space-y-2.5">
+      {valid.map((entry, i) => (
+        <li
+          key={i}
+          className="rounded-lg bg-bg-card/70 border border-line/50 overflow-hidden"
+        >
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold border-b border-line/40 ${tagStyle}`}
+          >
+            <Building2 size={11} />
+            <span className="truncate">{entry.company}</span>
+          </div>
+          <p className="px-3 py-2 text-sm text-text leading-relaxed whitespace-pre-wrap break-words">
+            {entry.value}
+          </p>
+        </li>
+      ))}
+    </ul>
   );
 }

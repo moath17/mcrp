@@ -598,37 +598,13 @@ export function getCodeAggregate(capabilityCode: string) {
 
   if (!key) return null;
 
-  const companies = rows.map((r) => r.company_name).filter((c) => c && c.trim() !== "");
-  const first = rows[0] || ({} as Record<string, string>);
-
-  const uniqueValues = (field: string) => {
-    const set = new Set<string>();
-    for (const r of rows) {
-      const v = (r[field] || "").trim();
-      if (v) set.add(v);
-    }
-    return Array.from(set);
-  };
+  const companyRows = rows.filter((r) => (r.company_name || "").trim() !== "");
 
   return {
     key,
-    company_count: companies.length,
-    companies,
-    capability_name: first.capability_name || "",
-    scope_definition: first.scope_definition || "",
-    development_history: first.development_history || "",
-    armament: first.armament || "",
-    cost: uniqueValues("cost").join(" / "),
-    family: first.family || "",
-    technical_specs: first.technical_specs || "",
-    countries_used: uniqueValues("countries_used").join(" / "),
-    training_requirements: first.training_requirements || "",
-    localization_status: uniqueValues("localization_status").join(" / "),
-    system_formation: first.system_formation || "",
-    factory_tests: first.factory_tests || "",
-    storage_requirements: first.storage_requirements || "",
-    sub_systems: first.sub_systems || "",
-    conflict_participation: first.conflict_participation || "",
+    company_count: companyRows.length,
+    companies: companyRows.map((r) => r.company_name),
+    companyRows,
   };
 }
 
