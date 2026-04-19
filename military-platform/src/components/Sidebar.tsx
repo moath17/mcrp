@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Home,
@@ -60,14 +61,19 @@ export default function Sidebar() {
             <X size={20} />
           </button>
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl grid place-items-center font-black text-white bg-gradient-to-br from-accent to-accent2 text-xs">
-              FCD
-            </div>
-            <div>
-              <h1 className="font-bold text-sm leading-tight text-text">موسوعة القدرات</h1>
-              <p className="text-[11px] text-text-muted">القدرات العسكرية</p>
-            </div>
+            <Image
+              src="/MNGDP LOGO 2 .png"
+              alt="شعار برنامج تطوير وزارة الحرس الوطني"
+              width={160}
+              height={48}
+              priority
+              className="h-10 w-auto object-contain"
+            />
           </Link>
+          <div className="mt-3">
+            <h1 className="font-bold text-sm leading-tight text-text">موسوعة القدرات</h1>
+            <p className="text-[11px] text-text-muted">القدرات العسكرية</p>
+          </div>
         </div>
 
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">

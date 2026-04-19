@@ -21,12 +21,16 @@ export default function HomePage() {
       {/* Top Bar */}
       <header className="sticky top-0 z-10 flex items-center justify-start px-5 py-3.5 border-b border-line bg-[rgba(15,23,42,0.75)] backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="w-[42px] h-[42px] rounded-[14px] grid place-items-center font-black text-white bg-gradient-to-br from-accent to-accent2 text-sm">
-            FCD
-          </div>
-          <div>
+          <Image
+            src="/MNGDP LOGO 2 .png"
+            alt="شعار برنامج تطوير وزارة الحرس الوطني"
+            width={180}
+            height={56}
+            priority
+            className="h-12 w-auto object-contain"
+          />
+          <div className="hidden sm:block">
             <div className="text-lg font-black text-text">موسوعة القدرات</div>
-            <div className="text-xs text-text-muted mt-0.5">اختر مساراً للبدء</div>
           </div>
         </div>
       </header>

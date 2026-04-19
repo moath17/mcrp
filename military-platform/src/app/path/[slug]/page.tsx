@@ -57,7 +57,7 @@ export default function PathPage() {
       <Breadcrumb items={[{ label: pathConfig?.name || slug }]} />
 
       {/* Path Header Banner */}
-      <div className="relative rounded-2xl overflow-hidden mb-8 h-[200px]">
+      <div className="relative rounded-2xl overflow-hidden mb-4 h-[200px]">
         <Image
           src={pathImage}
           alt={pathConfig?.name || slug}
@@ -73,6 +73,18 @@ export default function PathPage() {
           </p>
         </div>
       </div>
+
+      {/* Path Definition */}
+      {pathConfig?.description && (
+        <div className="glass-panel rounded-2xl p-5 mb-8 border-r-4 border-accent">
+          <div className="text-xs font-medium text-accent-light mb-1.5">
+            تعريف المسار
+          </div>
+          <p className="text-sm text-text leading-relaxed">
+            {pathConfig.description}
+          </p>
+        </div>
+      )}
 
       {/* Capabilities */}
       {capabilities.length === 0 ? (
