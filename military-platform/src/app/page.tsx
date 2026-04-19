@@ -87,7 +87,7 @@ export default function HomePage() {
             >
               <Scale size={18} className="mx-auto text-accent-light mb-1.5 group-hover:scale-110 transition-transform" />
               <div className="text-xl font-black text-text">مقارنات</div>
-              <div className="text-[11px] text-accent-light mt-0.5">بين الرموز والشركات</div>
+              <div className="text-[11px] text-accent-light mt-0.5">بين القدرات والحلول</div>
             </Link>
           </div>
 
