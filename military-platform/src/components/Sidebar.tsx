@@ -11,11 +11,13 @@ import {
   Menu,
   X,
   ChevronLeft,
+  Scale,
 } from "lucide-react";
 import { useState } from "react";
 import { MILITARY_PATHS } from "@/lib/paths-config";
 
 const utilityItems = [
+  { href: "/comparisons", label: "صفحة المقارنات", icon: Scale },
   { href: "/search", label: "البحث الذكي", icon: Search },
   { href: "/upload", label: "رفع البيانات", icon: Upload },
   { href: "/logs", label: "سجل العمليات", icon: ScrollText },

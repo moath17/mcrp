@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Layers, Database, Search as SearchIcon } from "lucide-react";
+import { Layers, Database, Search as SearchIcon, Scale, ArrowLeft } from "lucide-react";
 import { MILITARY_PATHS } from "@/lib/paths-config";
 
 export default function HomePage() {
@@ -20,7 +20,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Top Bar */}
-      <header className="sticky top-0 z-10 flex items-center justify-start px-5 py-3.5 border-b border-line bg-[rgba(15,23,42,0.75)] backdrop-blur-xl">
+      <header className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5 border-b border-line bg-[rgba(15,23,42,0.75)] backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <Image
             src="/MNGDP LOGO 2 .png"
@@ -34,6 +34,13 @@ export default function HomePage() {
             <div className="text-lg font-black text-text">موسوعة القدرات</div>
           </div>
         </div>
+        <Link
+          href="/comparisons"
+          className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-full border border-accent/40 bg-accent-soft/40 text-sm text-accent-light font-medium hover:bg-accent-soft hover:border-accent transition-colors"
+        >
+          <Scale size={16} />
+          صفحة المقارنات
+        </Link>
       </header>
 
       {/* Main Container */}
@@ -56,7 +63,7 @@ export default function HomePage() {
           </p>
 
           {/* Quick stats */}
-          <div className="mt-7 grid grid-cols-3 gap-3 max-w-[640px] mx-auto">
+          <div className="mt-7 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-[760px] mx-auto">
             <div className="rounded-2xl border border-line bg-glass px-3 py-4">
               <Layers size={18} className="mx-auto text-accent-light mb-1.5" />
               <div className="text-xl font-black text-text">{MILITARY_PATHS.length}</div>
@@ -74,6 +81,14 @@ export default function HomePage() {
               <div className="text-xl font-black text-text">بحث ذكي</div>
               <div className="text-[11px] text-text-muted mt-0.5">داخل الموسوعة</div>
             </div>
+            <Link
+              href="/comparisons"
+              className="rounded-2xl border border-accent/40 bg-accent-soft/30 px-3 py-4 hover:bg-accent-soft hover:border-accent transition-colors group"
+            >
+              <Scale size={18} className="mx-auto text-accent-light mb-1.5 group-hover:scale-110 transition-transform" />
+              <div className="text-xl font-black text-text">مقارنات</div>
+              <div className="text-[11px] text-accent-light mt-0.5">بين الرموز والشركات</div>
+            </Link>
           </div>
 
           <div className="mt-7 mx-auto flex gap-2.5 w-[min(650px,100%)] p-2.5 rounded-full border border-line bg-glass">
@@ -92,6 +107,29 @@ export default function HomePage() {
             </button>
           </div>
         </section>
+
+        {/* Comparisons CTA banner */}
+        <Link
+          href="/comparisons"
+          className="block mt-3 mb-8 rounded-2xl overflow-hidden border border-line bg-gradient-to-l from-accent-soft/30 via-bg-soft to-bg-soft hover:border-accent transition-colors group"
+        >
+          <div className="flex items-center justify-between gap-4 p-5">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-accent2 flex items-center justify-center shrink-0">
+                <Scale size={28} className="text-white" />
+              </div>
+              <div>
+                <div className="text-base sm:text-lg font-black text-text">صفحة المقارنات</div>
+                <div className="text-xs sm:text-sm text-text-muted mt-0.5">
+                  قارن بين قدرتين برمزيهما، أو بين شركتين تقدّمان نفس القدرة
+                </div>
+              </div>
+            </div>
+            <div className="text-accent-light group-hover:translate-x-[-4px] transition-transform">
+              <ArrowLeft size={22} />
+            </div>
+          </div>
+        </Link>
 
         {/* Section heading */}
         <div className="flex items-center gap-3 mt-2 mb-5 px-1">

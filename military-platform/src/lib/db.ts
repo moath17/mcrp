@@ -542,6 +542,118 @@ export function getCapabilitiesByPath(pathName: string) {
   return Array.from(capMap.values());
 }
 
+export function getCodesWithGeneralData() {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT k.capability_code, k.path, k.capability, k.sub_capability, k.type,
+              COUNT(DISTINCT g.company_name) as company_count
+       FROM key_data k
+       INNER JOIN general_requirements g ON k.capability_code = g.capability_code
+       WHERE g.company_name != ''
+       GROUP BY k.capability_code, k.path, k.capability, k.sub_capability, k.type
+       ORDER BY k.capability_code`
+    )
+    .all() as Array<{
+    capability_code: string;
+    path: string;
+    capability: string;
+    sub_capability: string;
+    type: string;
+    company_count: number;
+  }>;
+  db.close();
+  return rows;
+}
+
+export function getCompaniesForCode(capabilityCode: string) {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT company_name
+       FROM general_requirements
+       WHERE capability_code = ? AND company_name != ''
+       ORDER BY company_name`
+    )
+    .all(capabilityCode) as Array<{ company_name: string }>;
+  db.close();
+  return rows.map((r) => r.company_name);
+}
+
+export function getCodeAggregate(capabilityCode: string) {
+  const db = getDb();
+  const key = db
+    .prepare(
+      `SELECT capability_code, path, capability, sub_capability, type
+       FROM key_data WHERE capability_code = ?`
+    )
+    .get(capabilityCode) as Record<string, string> | undefined;
+
+  const rows = db
+    .prepare(
+      `SELECT * FROM general_requirements WHERE capability_code = ? ORDER BY id`
+    )
+    .all(capabilityCode) as Record<string, string>[];
+  db.close();
+
+  if (!key) return null;
+
+  const companies = rows.map((r) => r.company_name).filter((c) => c && c.trim() !== "");
+  const first = rows[0] || ({} as Record<string, string>);
+
+  const uniqueValues = (field: string) => {
+    const set = new Set<string>();
+    for (const r of rows) {
+      const v = (r[field] || "").trim();
+      if (v) set.add(v);
+    }
+    return Array.from(set);
+  };
+
+  return {
+    key,
+    company_count: companies.length,
+    companies,
+    capability_name: first.capability_name || "",
+    scope_definition: first.scope_definition || "",
+    development_history: first.development_history || "",
+    armament: first.armament || "",
+    cost: uniqueValues("cost").join(" / "),
+    family: first.family || "",
+    technical_specs: first.technical_specs || "",
+    countries_used: uniqueValues("countries_used").join(" / "),
+    training_requirements: first.training_requirements || "",
+    localization_status: uniqueValues("localization_status").join(" / "),
+    system_formation: first.system_formation || "",
+    factory_tests: first.factory_tests || "",
+    storage_requirements: first.storage_requirements || "",
+    sub_systems: first.sub_systems || "",
+    conflict_participation: first.conflict_participation || "",
+  };
+}
+
+export function getCompanyRow(capabilityCode: string, companyName: string) {
+  const db = getDb();
+  const key = db
+    .prepare(
+      `SELECT capability_code, path, capability, sub_capability, type
+       FROM key_data WHERE capability_code = ?`
+    )
+    .get(capabilityCode) as Record<string, string> | undefined;
+
+  const row = db
+    .prepare(
+      `SELECT * FROM general_requirements
+       WHERE capability_code = ? AND company_name = ?
+       LIMIT 1`
+    )
+    .get(capabilityCode, companyName) as Record<string, string> | undefined;
+  db.close();
+
+  if (!key || !row) return null;
+  return { key, ...row };
+}
+
 export function getTypeDetails(capabilityCode: string) {
   const db = getDb();
   const key = db.prepare("SELECT * FROM key_data WHERE capability_code = ?").get(capabilityCode) as Record<string, string> | undefined;
