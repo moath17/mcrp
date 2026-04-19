@@ -11,6 +11,7 @@ import {
   Building2,
   MapPin,
   Factory,
+  type LucideIcon,
 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 import SubElementsTree from "@/components/SubElementsTree";
@@ -69,6 +70,48 @@ function EmptyField() {
   );
 }
 
+interface ImageSectionCardProps {
+  icon: LucideIcon;
+  title: string;
+  gradient: string;
+  isEmpty: boolean;
+  children: React.ReactNode;
+}
+
+function ImageSectionCard({
+  icon: Icon,
+  title,
+  gradient,
+  isEmpty,
+  children,
+}: ImageSectionCardProps) {
+  return (
+    <div className="glass-panel rounded-2xl overflow-hidden flex flex-col h-full">
+      {/* Hero "image" area */}
+      <div className={`relative h-[140px] bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(0,0,0,0.25),transparent_55%)]" />
+        <Icon size={56} className="text-white/95 drop-shadow-lg relative z-10" strokeWidth={1.5} />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/40 via-transparent to-transparent" />
+      </div>
+
+      {/* Body */}
+      <div className="p-5 flex-1 flex flex-col">
+        <h3 className="text-base font-bold text-text mb-2">{title}</h3>
+        <div className="flex-1">
+          {isEmpty ? (
+            <p className="text-xs text-text-muted/50 italic leading-relaxed">
+              لا توجد بيانات حالياً — سيتم تعبئتها لاحقاً
+            </p>
+          ) : (
+            children
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TypeDetailPage() {
   const params = useParams();
   const slug = decodeURIComponent(params.slug as string);
@@ -113,7 +156,7 @@ export default function TypeDetailPage() {
 
   const { key, special } = data;
 
-  const specialFields = [
+  const mainFields = [
     {
       key: "definition",
       title: "تعريف القدرة",
@@ -142,24 +185,30 @@ export default function TypeDetailPage() {
       value: special?.sub_elements || "",
       type: "tree" as const,
     },
+  ];
+
+  const imageCardFields = [
     {
       key: "units_used",
       title: "الوحدات المستخدمة للقدرة",
-      icon: <Building2 size={20} className="text-accent-light" />,
+      icon: Building2,
+      gradient: "from-blue-600 to-cyan-700",
       value: special?.units_used || "",
       type: "units" as const,
     },
     {
       key: "local_entities",
       title: "الجهات المحلية المستخدمة للقدرة",
-      icon: <MapPin size={20} className="text-accent-light" />,
+      icon: MapPin,
+      gradient: "from-emerald-600 to-teal-700",
       value: special?.local_entities || "",
       type: "paragraph" as const,
     },
     {
       key: "manufacturers",
       title: "الشركات المصنعة للقدرة (العالمية)",
-      icon: <Factory size={20} className="text-accent-light" />,
+      icon: Factory,
+      gradient: "from-amber-600 to-orange-700",
       value: special?.manufacturers || "",
       type: "paragraph" as const,
     },
@@ -200,9 +249,9 @@ export default function TypeDetailPage() {
         </div>
       </div>
 
-      {/* Special Requirements sections */}
+      {/* Main full-width sections */}
       <div className="space-y-4">
-        {specialFields.map((field) => (
+        {mainFields.map((field) => (
           <Section
             key={field.key}
             icon={field.icon}
@@ -216,11 +265,33 @@ export default function TypeDetailPage() {
               </p>
             ) : field.type === "tree" ? (
               <SubElementsTree data={field.value} />
-            ) : field.type === "units" ? (
-              <UnitCard data={field.value} />
             ) : null}
           </Section>
         ))}
+      </div>
+
+      {/* Image cards row — 3 sections side by side */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+        {imageCardFields.map((field) => {
+          const isEmpty = !field.value || field.value.trim() === "";
+          return (
+            <ImageSectionCard
+              key={field.key}
+              icon={field.icon}
+              title={field.title}
+              gradient={field.gradient}
+              isEmpty={isEmpty}
+            >
+              {field.type === "units" ? (
+                <UnitCard data={field.value} />
+              ) : (
+                <p className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">
+                  {field.value}
+                </p>
+              )}
+            </ImageSectionCard>
+          );
+        })}
       </div>
     </div>
   );
