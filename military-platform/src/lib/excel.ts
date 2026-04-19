@@ -71,8 +71,8 @@ export function parseExcelBuffer(buffer: Buffer) {
   const sheetNames = workbook.SheetNames;
 
   const keySheetName = findSheetByPattern(sheetNames, ["Key", "key", "المفتاح"]) || sheetNames[0];
-  const specialSheetName = findSheetByPattern(sheetNames, ["متطلب خاص", "خاص"]) || sheetNames[1];
-  const generalSheetName = findSheetByPattern(sheetNames, ["متطلب عام", "عام"]) || sheetNames[2];
+  const specialSheetName = findSheetByPattern(sheetNames, ["متطلب خاص"]) || sheetNames[1];
+  const generalSheetName = findSheetByPattern(sheetNames, ["متطلب عام"]) || sheetNames[2];
 
   const parseSheet = (
     sheetName: string | undefined,
