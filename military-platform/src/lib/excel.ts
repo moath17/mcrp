@@ -74,22 +74,29 @@ export function parseExcelBuffer(buffer: Buffer) {
   const specialSheetName = findSheetByPattern(sheetNames, ["متطلب خاص", "خاص"]) || sheetNames[1];
   const generalSheetName = findSheetByPattern(sheetNames, ["متطلب عام", "عام"]) || sheetNames[2];
 
-  const parseSheet = (sheetName: string | undefined, columnMap: Record<string, string>) => {
+  const parseSheet = (
+    sheetName: string | undefined,
+    columnMap: Record<string, string>,
+    skipExampleRow: boolean
+  ) => {
     if (!sheetName || !workbook.Sheets[sheetName]) return [];
     const sheet = workbook.Sheets[sheetName];
     const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
 
-    if (rawRows.length <= 1) return [];
+    if (rawRows.length === 0) return [];
 
-    return rawRows
-      .slice(1)
+    const dataRows = skipExampleRow ? rawRows.slice(1) : rawRows;
+
+    return dataRows
       .map((row) => mapRow(row, columnMap))
       .filter((row) => row.capability_code && row.capability_code.trim() !== "");
   };
 
-  const keyData = parseSheet(keySheetName, KEY_COLUMNS);
-  const specialData = parseSheet(specialSheetName, SPECIAL_COLUMNS);
-  const generalData = parseSheet(generalSheetName, GENERAL_COLUMNS);
+  // Key sheet starts with real data (no instructional/example row).
+  // Special/General sheets have an example row at index 0 to skip.
+  const keyData = parseSheet(keySheetName, KEY_COLUMNS, false);
+  const specialData = parseSheet(specialSheetName, SPECIAL_COLUMNS, true);
+  const generalData = parseSheet(generalSheetName, GENERAL_COLUMNS, true);
 
   return { keyData, specialData, generalData, sheetNames };
 }
