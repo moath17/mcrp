@@ -6,6 +6,7 @@ const KEY_COLUMNS: Record<string, string> = {
   "القدرة": "capability",
   "القدرة الفرعية": "sub_capability",
   "النوع": "type",
+  "4D": "four_d",
 };
 
 const SPECIAL_COLUMNS: Record<string, string> = {

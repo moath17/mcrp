@@ -15,6 +15,19 @@ function getDb(): Database.Database {
   const db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+
+  // Lightweight migration: ensure key_data has four_d column for existing DBs.
+  try {
+    const cols = db
+      .prepare("PRAGMA table_info(key_data)")
+      .all() as { name: string }[];
+    if (cols.length > 0 && !cols.some((c) => c.name === "four_d")) {
+      db.exec("ALTER TABLE key_data ADD COLUMN four_d TEXT DEFAULT ''");
+    }
+  } catch {
+    // table may not exist yet; CREATE TABLE below handles it
+  }
+
   return db;
 }
 
@@ -28,7 +41,8 @@ export function initializeDatabase() {
       path TEXT DEFAULT '',
       capability TEXT DEFAULT '',
       sub_capability TEXT DEFAULT '',
-      type TEXT DEFAULT ''
+      type TEXT DEFAULT '',
+      four_d TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS special_requirements (
@@ -185,8 +199,8 @@ export function clearData() {
 export function insertKeyData(rows: Record<string, string>[]) {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO key_data (capability_code, path, capability, sub_capability, type)
-    VALUES (@capability_code, @path, @capability, @sub_capability, @type)
+    INSERT INTO key_data (capability_code, path, capability, sub_capability, type, four_d)
+    VALUES (@capability_code, @path, @capability, @sub_capability, @type, @four_d)
   `);
   const insertMany = db.transaction((items: Record<string, string>[]) => {
     for (const item of items) {
@@ -458,6 +472,20 @@ export function getAllCapabilityCodes() {
   return codes;
 }
 
+export function getFourDCountsByPath() {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT path, four_d, COUNT(*) as count
+       FROM key_data
+       WHERE path != '' AND four_d != ''
+       GROUP BY path, four_d`
+    )
+    .all() as { path: string; four_d: string; count: number }[];
+  db.close();
+  return rows;
+}
+
 export function getPathsWithCounts() {
   const db = getDb();
   const paths = db
@@ -475,7 +503,7 @@ export function getCapabilitiesByPath(pathName: string) {
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT k.id, k.capability_code, k.capability, k.sub_capability, k.type,
+      `SELECT k.id, k.capability_code, k.capability, k.sub_capability, k.type, k.four_d,
               s.definition
        FROM key_data k
        LEFT JOIN special_requirements s ON k.capability_code = s.capability_code
@@ -488,6 +516,7 @@ export function getCapabilitiesByPath(pathName: string) {
     capability: string;
     sub_capability: string;
     type: string;
+    four_d: string;
     definition: string;
   }[];
   db.close();
@@ -495,6 +524,7 @@ export function getCapabilitiesByPath(pathName: string) {
   type TypeItem = {
     capability_code: string;
     type: string;
+    four_d: string;
     definition: string;
   };
   type SubCapability = {
@@ -534,6 +564,7 @@ export function getCapabilitiesByPath(pathName: string) {
     sub.types.push({
       capability_code: row.capability_code,
       type: row.type,
+      four_d: row.four_d || "",
       definition: row.definition,
     });
     cap.typesCount++;

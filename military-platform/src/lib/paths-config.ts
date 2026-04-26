@@ -5,7 +5,71 @@ export interface PathConfig {
   subtitle: string;
   description: string;
   capabilityCount: number;
+  capabilityImage?: string;
 }
+
+export type FourDKey = "Detect" | "Deter" | "Defend" | "Deployment Support";
+
+export const FOUR_D_KEYS: FourDKey[] = [
+  "Detect",
+  "Deter",
+  "Defend",
+  "Deployment Support",
+];
+
+export const FOUR_D_LABELS_AR: Record<FourDKey, string> = {
+  Detect: "الكشف",
+  Deter: "الردع",
+  Defend: "الدفاع",
+  "Deployment Support": "إسناد الانتشار",
+};
+
+export const FOUR_D_DESCRIPTIONS: Record<FourDKey, string> = {
+  Detect:
+    "كشف التهديدات ورصد الأهداف والاستخبارات الميدانية — عبر جميع المسارات الثمانية.",
+  Deter:
+    "ردع الخصوم عبر الحضور والقدرات العملياتية الموزعة على المسارات الثمانية.",
+  Defend:
+    "حماية القوات والمنشآت ومواجهة التهديدات — عبر المسارات الثمانية.",
+  "Deployment Support":
+    "قدرات إسناد الانتشار ودعمه: الإسناد الهندسي والقدرات الطبية (مسار 9 و 10).",
+};
+
+// Paths included for each 4D key. Deployment Support maps ONLY to paths 9, 10.
+// The other 3 keys each map to paths 1..8 (types inside them are filtered client-side).
+export const FOUR_D_PATHS: Record<FourDKey, string[]> = {
+  Detect: [
+    "مسار 1",
+    "مسار 2",
+    "مسار 3",
+    "مسار 4",
+    "مسار 5",
+    "مسار 6",
+    "مسار 7",
+    "مسار 8",
+  ],
+  Deter: [
+    "مسار 1",
+    "مسار 2",
+    "مسار 3",
+    "مسار 4",
+    "مسار 5",
+    "مسار 6",
+    "مسار 7",
+    "مسار 8",
+  ],
+  Defend: [
+    "مسار 1",
+    "مسار 2",
+    "مسار 3",
+    "مسار 4",
+    "مسار 5",
+    "مسار 6",
+    "مسار 7",
+    "مسار 8",
+  ],
+  "Deployment Support": ["مسار 9", "مسار 10"],
+};
 
 export const MILITARY_PATHS: PathConfig[] = [
   {
@@ -16,6 +80,7 @@ export const MILITARY_PATHS: PathConfig[] = [
     description:
       "كل وسيلة نقل أو قتال تتحرك على الأرض وتُستخدم في العمليات العسكرية.",
     capabilityCount: 9,
+    capabilityImage: "/images/path1.jpeg",
   },
   {
     name: "المدفعية",

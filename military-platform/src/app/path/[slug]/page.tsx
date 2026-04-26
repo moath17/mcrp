@@ -1,16 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { Loader2, ChevronDown, Layers, ImageIcon } from "lucide-react";
+import { Loader2, ChevronDown, Layers, X } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
-import { getPathBySlug, getPathImage, getDbNameFromSlug } from "@/lib/paths-config";
+import {
+  getPathBySlug,
+  getPathImage,
+  getDbNameFromSlug,
+  FOUR_D_KEYS,
+  FOUR_D_LABELS_AR,
+  type FourDKey,
+} from "@/lib/paths-config";
 
 interface CapabilityType {
   capability_code: string;
   type: string;
+  four_d?: string;
   definition: string;
 }
 
@@ -27,10 +35,19 @@ interface CapabilityGroup {
 
 export default function PathPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = decodeURIComponent(params.slug as string);
   const pathConfig = getPathBySlug(slug);
   const pathImage = getPathImage(slug);
   const dbName = getDbNameFromSlug(slug);
+
+  const rawFourD = searchParams.get("4d");
+  const activeFourD: FourDKey | null = useMemo(() => {
+    if (!rawFourD) return null;
+    return (FOUR_D_KEYS as string[]).includes(rawFourD)
+      ? (rawFourD as FourDKey)
+      : null;
+  }, [rawFourD]);
 
   const [capabilities, setCapabilities] = useState<CapabilityGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -44,6 +61,27 @@ export default function PathPage() {
       })
       .finally(() => setLoading(false));
   }, [dbName]);
+
+  // Filter types by 4D when query param is present. Hide sub-capabilities
+  // and capabilities that become empty after filtering.
+  const visibleCapabilities = useMemo<CapabilityGroup[]>(() => {
+    if (!activeFourD) return capabilities;
+    return capabilities
+      .map((cap) => {
+        const subCapabilities = cap.subCapabilities
+          .map((sub) => ({
+            ...sub,
+            types: sub.types.filter((t) => t.four_d === activeFourD),
+          }))
+          .filter((sub) => sub.types.length > 0);
+        const typesCount = subCapabilities.reduce(
+          (sum, s) => sum + s.types.length,
+          0
+        );
+        return { ...cap, subCapabilities, typesCount };
+      })
+      .filter((cap) => cap.subCapabilities.length > 0);
+  }, [capabilities, activeFourD]);
 
   const toggleCapability = (capName: string) => {
     setExpandedCap((prev) => (prev === capName ? null : capName));
@@ -74,10 +112,29 @@ export default function PathPage() {
         <div className="absolute bottom-6 right-6">
           <h1 className="text-3xl font-black text-text">{pathConfig?.name || slug}</h1>
           <p className="text-sm text-text-muted mt-1">
-            {capabilities.length} قدرة في هذا المسار
+            {visibleCapabilities.length} قدرة
+            {activeFourD ? " ضمن الفلتر الحالي" : " في هذا المسار"}
           </p>
         </div>
       </div>
+
+      {activeFourD && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-accent/30 bg-accent-soft/30 px-4 py-2.5 mb-4">
+          <div className="text-[13px] text-text">
+            الفلتر الحالي:{" "}
+            <span className="font-bold text-accent-light">
+              {FOUR_D_LABELS_AR[activeFourD]} ({activeFourD})
+            </span>{" "}
+            — يتم عرض الأنواع المصنفة بهذا التصنيف فقط
+          </div>
+          <Link
+            href={`/path/${encodeURIComponent(slug)}`}
+            className="inline-flex items-center gap-1 text-xs text-accent-light hover:text-text transition-colors"
+          >
+            <X size={14} /> إزالة الفلتر
+          </Link>
+        </div>
+      )}
 
       {/* Path Definition */}
       {pathConfig?.description && (
@@ -92,17 +149,21 @@ export default function PathPage() {
       )}
 
       {/* Capabilities */}
-      {capabilities.length === 0 ? (
+      {visibleCapabilities.length === 0 ? (
         <div className="glass-panel rounded-2xl p-12 text-center">
           <Layers size={48} className="mx-auto text-text-muted/30 mb-4" />
-          <h2 className="text-lg font-medium text-text-muted mb-2">لا توجد قدرات</h2>
+          <h2 className="text-lg font-medium text-text-muted mb-2">
+            {activeFourD ? "لا توجد قدرات ضمن هذا التصنيف" : "لا توجد قدرات"}
+          </h2>
           <p className="text-sm text-text-muted/70">
-            لم يتم رفع بيانات لهذا المسار بعد
+            {activeFourD
+              ? "جرّب إزالة الفلتر أو اختيار تصنيف مختلف"
+              : "لم يتم رفع بيانات لهذا المسار بعد"}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {capabilities.map((cap, capIdx) => {
+          {visibleCapabilities.map((cap, capIdx) => {
             const isExpanded = expandedCap === cap.capability;
             return (
               <div
@@ -115,33 +176,33 @@ export default function PathPage() {
                     onClick={() => toggleCapability(cap.capability)}
                     className="w-full text-right cursor-pointer group"
                   >
-                    {/* Placeholder image area */}
-                    <div className="relative h-[140px] bg-gradient-to-br from-bg-card to-bg-soft flex items-center justify-center overflow-hidden">
-                      <Image
-                        src={`/images/capability-placeholder.svg`}
-                        alt={cap.capability}
-                        width={400}
-                        height={140}
-                        className="w-full h-full object-cover opacity-20"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = "none";
-                        }}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <ImageIcon size={40} className="text-text-muted/20" />
-                      </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/90 to-transparent" />
+                    {/* Image area */}
+                    <div className="relative h-[160px] bg-gradient-to-br from-bg-card to-bg-soft overflow-hidden">
+                      {pathConfig?.capabilityImage ? (
+                        <Image
+                          src={pathConfig.capabilityImage}
+                          alt={cap.capability}
+                          width={600}
+                          height={200}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Layers size={40} className="text-text-muted/20" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/95 via-[#0f172a]/40 to-transparent" />
                       <div className="absolute bottom-3 right-4 left-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <h3 className="text-base font-bold text-text">{cap.capability}</h3>
+                            <h3 className="text-base font-bold text-text drop-shadow-md">{cap.capability}</h3>
                             <p className="text-xs text-text-muted mt-0.5">
                               {cap.subCapabilities.length} قدرة فرعية
                               <span className="opacity-60"> &bull; </span>
                               {cap.typesCount} {cap.typesCount === 1 ? "نوع" : "أنواع"}
                             </p>
                           </div>
-                          <div className="w-8 h-8 rounded-lg bg-accent-soft/50 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-accent-soft/80 backdrop-blur-sm flex items-center justify-center">
                             <ChevronDown
                               size={16}
                               className={`text-accent-light transition-transform duration-300 ${
@@ -152,7 +213,7 @@ export default function PathPage() {
                         </div>
                       </div>
                       {/* Capability number badge */}
-                      <div className="absolute top-3 left-3 text-xs px-2.5 py-1 rounded-full bg-accent-soft/80 text-accent-light font-medium border border-accent/20">
+                      <div className="absolute top-3 left-3 text-xs px-2.5 py-1 rounded-full bg-accent-soft/90 backdrop-blur-sm text-accent-light font-medium border border-accent/30">
                         قدرة {capIdx + 1}
                       </div>
                     </div>
