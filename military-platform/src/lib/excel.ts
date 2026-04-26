@@ -43,6 +43,9 @@ const GENERAL_COLUMNS: Record<string, string> = {
   "مشاركة القدرة في النزاعات": "conflict_participation",
 };
 
+// The "Hanwha + Norinco" sheet uses the exact same column layout as the general sheet.
+const COMPANY_COLUMNS = GENERAL_COLUMNS;
+
 function mapRow(row: Record<string, unknown>, columnMap: Record<string, string>): Record<string, string> {
   const mapped: Record<string, string> = {};
   const reverseMap = new Map<string, string>();
@@ -73,7 +76,15 @@ export function parseExcelBuffer(buffer: Buffer) {
 
   const keySheetName = findSheetByPattern(sheetNames, ["Key", "key", "المفتاح"]) || sheetNames[0];
   const specialSheetName = findSheetByPattern(sheetNames, ["متطلب خاص"]) || sheetNames[1];
-  const generalSheetName = findSheetByPattern(sheetNames, ["متطلب عام"]) || sheetNames[2];
+  // The original general sheet — must not match the Hanwha/Norinco company sheet.
+  const generalSheetName =
+    sheetNames.find(
+      (n) => n.includes("متطلب عام") && !n.includes("Hanwha")
+    ) || sheetNames[2];
+  const companySheetName = findSheetByPattern(sheetNames, [
+    "Hanwha",
+    "Norinco",
+  ]);
 
   const parseSheet = (
     sheetName: string | undefined,
@@ -94,10 +105,11 @@ export function parseExcelBuffer(buffer: Buffer) {
   };
 
   // Key sheet starts with real data (no instructional/example row).
-  // Special/General sheets have an example row at index 0 to skip.
+  // Special/General/Company sheets have an example row at index 0 to skip.
   const keyData = parseSheet(keySheetName, KEY_COLUMNS, false);
   const specialData = parseSheet(specialSheetName, SPECIAL_COLUMNS, true);
   const generalData = parseSheet(generalSheetName, GENERAL_COLUMNS, true);
+  const companyData = parseSheet(companySheetName, COMPANY_COLUMNS, true);
 
-  return { keyData, specialData, generalData, sheetNames };
+  return { keyData, specialData, generalData, companyData, sheetNames };
 }

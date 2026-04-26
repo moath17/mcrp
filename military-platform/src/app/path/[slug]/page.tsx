@@ -237,7 +237,11 @@ export default function PathPage() {
                               {sub.types.map((t, idx) => (
                                 <Link
                                   key={t.capability_code}
-                                  href={`/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(t.capability_code)}`}
+                                  href={`/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(t.capability_code)}${
+                                    activeFourD
+                                      ? `?4d=${encodeURIComponent(activeFourD)}`
+                                      : ""
+                                  }`}
                                   className="group relative p-4 rounded-xl bg-bg-card/60 border border-line hover:border-accent/40 hover:bg-accent-soft/30 transition-all duration-200"
                                 >
                                   <div className="text-sm font-bold text-text group-hover:text-accent-light transition-colors">

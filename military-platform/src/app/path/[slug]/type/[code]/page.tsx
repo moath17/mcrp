@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import {
@@ -9,16 +10,12 @@ import {
   Target,
   FlaskConical,
   Network,
-  Building2,
-  MapPin,
-  Factory,
   ChevronRight,
   ChevronLeft,
-  type LucideIcon,
+  ArrowLeft,
+  Tag,
 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
-import SubElementsTree from "@/components/SubElementsTree";
-import UnitCard from "@/components/UnitCard";
 import {
   getPathBySlug,
   getDbNameFromSlug,
@@ -33,14 +30,17 @@ interface SiblingType {
   four_d?: string;
 }
 
+interface TypeKey {
+  capability_code: string;
+  path: string;
+  capability: string;
+  sub_capability: string;
+  type: string;
+  four_d?: string;
+}
+
 interface TypeData {
-  key: {
-    capability_code: string;
-    path: string;
-    capability: string;
-    sub_capability: string;
-    type: string;
-  } | null;
+  key: TypeKey | null;
   special: {
     capability_code: string;
     type: string;
@@ -55,73 +55,65 @@ interface TypeData {
   general: Record<string, string> | null;
 }
 
-interface SectionProps {
-  icon: React.ReactNode;
-  title: string;
-  children: React.ReactNode;
+interface CompanyListItem {
+  company_name: string;
+  capability_name: string;
 }
 
-function Section({ icon, title, children }: SectionProps) {
-  return (
-    <div className="glass-panel rounded-2xl p-6">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-accent-soft flex items-center justify-center shrink-0">
-          {icon}
-        </div>
-        <div className="flex-1">
-          <h2 className="text-lg font-bold text-text">{title}</h2>
-        </div>
-      </div>
-      <div className="pr-2 sm:pr-[52px]">{children}</div>
-    </div>
-  );
-}
+const COMPANY_META: Record<
+  string,
+  { logo: string; accent: string; ring: string; bg: string }
+> = {
+  Hanwha: {
+    logo: "/images/companies/hanwha.png",
+    accent: "text-orange-300",
+    ring: "ring-orange-400/50 border-orange-400/40",
+    bg: "from-orange-500/15 via-amber-500/5 to-transparent",
+  },
+  Norinco: {
+    logo: "/images/companies/norinco.png",
+    accent: "text-red-300",
+    ring: "ring-red-400/50 border-red-400/40",
+    bg: "from-red-500/15 via-red-500/5 to-transparent",
+  },
+};
 
-function EmptyField() {
-  return (
-    <p className="text-sm text-text-muted/40 italic">
-      لا توجد بيانات حالياً — سيتم تعبئتها لاحقاً
-    </p>
-  );
-}
+const FOUR_D_CHIP: Record<FourDKey, string> = {
+  Detect: "bg-sky-500/15 text-sky-200 border-sky-400/40",
+  Deter: "bg-amber-500/15 text-amber-200 border-amber-400/40",
+  Defend: "bg-emerald-500/15 text-emerald-200 border-emerald-400/40",
+  "Deployment Support":
+    "bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/40",
+};
 
-interface ImageSectionCardProps {
-  icon: LucideIcon;
-  title: string;
-  gradient: string;
-  isEmpty: boolean;
-  children: React.ReactNode;
-}
-
-function ImageSectionCard({
+function MiniCard({
   icon: Icon,
   title,
-  gradient,
-  isEmpty,
-  children,
-}: ImageSectionCardProps) {
+  value,
+}: {
+  icon: typeof FileText;
+  title: string;
+  value: string;
+}) {
+  const isEmpty = !value || value.trim() === "";
   return (
-    <div className="glass-panel rounded-2xl overflow-hidden flex flex-col h-full">
-      {/* Hero "image" area */}
-      <div className={`relative h-[140px] bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18),transparent_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(0,0,0,0.25),transparent_55%)]" />
-        <Icon size={56} className="text-white/95 drop-shadow-lg relative z-10" strokeWidth={1.5} />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0f172a]/40 via-transparent to-transparent" />
-      </div>
-
-      {/* Body */}
-      <div className="p-5 flex-1 flex flex-col">
-        <h3 className="text-base font-bold text-text mb-2">{title}</h3>
-        <div className="flex-1">
-          {isEmpty ? (
-            <p className="text-xs text-text-muted/50 italic leading-relaxed">
-              لا توجد بيانات حالياً — سيتم تعبئتها لاحقاً
-            </p>
-          ) : (
-            children
-          )}
+    <div className="relative rounded-2xl border border-line bg-bg-soft/70 p-4 h-full flex flex-col min-h-[180px]">
+      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-line/70">
+        <div className="w-7 h-7 rounded-lg bg-accent-soft flex items-center justify-center shrink-0">
+          <Icon size={14} className="text-accent-light" />
         </div>
+        <h3 className="text-[12px] font-bold text-text">{title}</h3>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        {isEmpty ? (
+          <p className="text-[11.5px] text-text-muted/50 italic leading-relaxed">
+            لا توجد بيانات حالياً — سيتم تعبئتها لاحقاً
+          </p>
+        ) : (
+          <p className="text-[12px] text-text-muted leading-relaxed line-clamp-6 whitespace-pre-wrap">
+            {value}
+          </p>
+        )}
       </div>
     </div>
   );
@@ -150,6 +142,7 @@ export default function TypeDetailPage() {
   const [data, setData] = useState<TypeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [siblings, setSiblings] = useState<SiblingType[]>([]);
+  const [companies, setCompanies] = useState<CompanyListItem[]>([]);
 
   useEffect(() => {
     fetch(`/api/data?action=detail&code=${encodeURIComponent(code)}`)
@@ -160,8 +153,14 @@ export default function TypeDetailPage() {
       .finally(() => setLoading(false));
   }, [code]);
 
-  // Load sibling types in the same path (flattened in display order)
-  // and filter by active 4D so prev/next navigation stays within the filter.
+  useEffect(() => {
+    fetch(`/api/company-profile?code=${encodeURIComponent(code)}`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success) setCompanies(res.companies || []);
+      });
+  }, [code]);
+
   useEffect(() => {
     if (!dbName) return;
     fetch(`/api/path-capabilities?path=${encodeURIComponent(dbName)}`)
@@ -208,6 +207,11 @@ export default function TypeDetailPage() {
       targetCode
     )}${fourDSuffix}`;
 
+  const buildCompanyHref = (companyName: string) =>
+    `/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(
+      code
+    )}/company/${encodeURIComponent(companyName)}${fourDSuffix}`;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -229,71 +233,16 @@ export default function TypeDetailPage() {
           ]}
         />
         <div className="glass-panel rounded-2xl p-12 text-center">
-          <h2 className="text-lg font-medium text-text-muted">لم يتم العثور على البيانات</h2>
+          <h2 className="text-lg font-medium text-text-muted">
+            لم يتم العثور على البيانات
+          </h2>
         </div>
       </div>
     );
   }
 
   const { key, special } = data;
-
-  const mainFields = [
-    {
-      key: "definition",
-      title: "تعريف القدرة",
-      icon: <FileText size={20} className="text-accent-light" />,
-      value: special?.definition || "",
-      type: "paragraph" as const,
-    },
-    {
-      key: "operational_requirements",
-      title: "المتطلبات العملياتية",
-      icon: <Target size={20} className="text-accent-light" />,
-      value: special?.operational_requirements || "",
-      type: "paragraph" as const,
-    },
-    {
-      key: "scenarios",
-      title: "سيناريوهات ومتطلبات التجارب",
-      icon: <FlaskConical size={20} className="text-accent-light" />,
-      value: special?.scenarios || "",
-      type: "paragraph" as const,
-    },
-    {
-      key: "sub_elements",
-      title: "العناصر الفرعية المكونة للقدرة",
-      icon: <Network size={20} className="text-accent-light" />,
-      value: special?.sub_elements || "",
-      type: "tree" as const,
-    },
-  ];
-
-  const imageCardFields = [
-    {
-      key: "units_used",
-      title: "الوحدات المستخدمة للقدرة",
-      icon: Building2,
-      gradient: "from-blue-600 to-cyan-700",
-      value: special?.units_used || "",
-      type: "units" as const,
-    },
-    {
-      key: "local_entities",
-      title: "الجهات المحلية المستخدمة للقدرة",
-      icon: MapPin,
-      gradient: "from-emerald-600 to-teal-700",
-      value: special?.local_entities || "",
-      type: "paragraph" as const,
-    },
-    {
-      key: "manufacturers",
-      title: "الشركات المصنعة للقدرة (العالمية)",
-      icon: Factory,
-      gradient: "from-amber-600 to-orange-700",
-      value: special?.manufacturers || "",
-      type: "paragraph" as const,
-    },
-  ];
+  const fourDKey = (key.four_d || activeFourD || "") as FourDKey;
 
   return (
     <div className="animate-fade-in">
@@ -303,145 +252,188 @@ export default function TypeDetailPage() {
             label: pathConfig?.name || slug,
             href: `/path/${encodeURIComponent(slug)}${fourDSuffix}`,
           },
-          { label: key.type || key.sub_capability || key.capability || "تفاصيل النوع" },
+          {
+            label:
+              key.type || key.sub_capability || key.capability || "تفاصيل النوع",
+          },
         ]}
       />
 
-      {/* Type Header */}
-      <div className="glass-panel rounded-2xl p-6 mb-6">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-accent2 flex items-center justify-center shrink-0">
-            <FileText size={28} className="text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-text">
-              {key.type || key.sub_capability || key.capability || "تفاصيل النوع"}
-            </h1>
-            <div className="flex flex-wrap gap-3 mt-2">
-              {key.capability && (
-                <span className="text-xs px-3 py-1 rounded-full bg-accent-soft text-accent-light border border-accent/20">
-                  {key.capability}
+      {/* Hero / header strip */}
+      <div className="glass-panel rounded-2xl p-5 mb-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4 min-w-0">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-accent to-accent2 flex items-center justify-center shrink-0">
+              <FileText size={28} className="text-white" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-black text-text truncate">
+                {key.type || key.sub_capability || "تفاصيل النوع"}
+              </h1>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap text-[11px]">
+                <span className="px-2.5 py-0.5 rounded-full bg-bg-soft/80 text-text-muted border border-line">
+                  {key.capability_code}
                 </span>
-              )}
-              {key.sub_capability && (
-                <span className="text-xs px-3 py-1 rounded-full bg-accent2-soft text-accent2 border border-accent2/20">
-                  {key.sub_capability}
-                </span>
-              )}
+                {key.capability && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-accent-soft text-accent-light border border-accent/20">
+                    {key.capability}
+                  </span>
+                )}
+                {key.sub_capability && (
+                  <span className="px-2.5 py-0.5 rounded-full bg-accent2-soft text-accent2 border border-accent2/20">
+                    {key.sub_capability}
+                  </span>
+                )}
+                {fourDKey && FOUR_D_CHIP[fourDKey] && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border font-bold ${FOUR_D_CHIP[fourDKey]}`}
+                  >
+                    <Tag size={10} />
+                    {fourDKey} • {FOUR_D_LABELS_AR[fourDKey]}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Inline prev/next */}
+          {siblings.length > 0 && currentIndex >= 0 && (
+            <div className="flex items-center gap-2">
+              {prevCode ? (
+                <Link
+                  href={buildTypeHref(prevCode)}
+                  title="النوع السابق"
+                  className="group flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-line bg-bg-soft hover:border-accent-light hover:bg-accent-soft/30 transition-all text-sm"
+                >
+                  <ChevronRight size={16} className="text-accent-light" />
+                  <span className="text-xs text-text-muted group-hover:text-text">
+                    السابق
+                  </span>
+                </Link>
+              ) : null}
+              <div className="text-[11px] text-text-muted px-2">
+                <span className="font-black text-text">
+                  {currentIndex + 1}
+                </span>
+                <span className="text-text-muted/60"> / {totalInFilter}</span>
+                {activeFourD && (
+                  <span className="block text-[10px] text-accent-light mt-0.5">
+                    ضمن «{FOUR_D_LABELS_AR[activeFourD]}»
+                  </span>
+                )}
+              </div>
+              {nextCode ? (
+                <Link
+                  href={buildTypeHref(nextCode)}
+                  title="النوع التالي"
+                  className="group flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-line bg-bg-soft hover:border-accent-light hover:bg-accent-soft/30 transition-all text-sm"
+                >
+                  <span className="text-xs text-text-muted group-hover:text-text">
+                    التالي
+                  </span>
+                  <ChevronLeft size={16} className="text-accent-light" />
+                </Link>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Main full-width sections */}
-      <div className="space-y-4">
-        {mainFields.map((field) => (
-          <Section
-            key={field.key}
-            icon={field.icon}
-            title={field.title}
-          >
-            {!field.value || field.value.trim() === "" ? (
-              <EmptyField />
-            ) : field.type === "paragraph" ? (
-              <p className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">
-                {field.value}
-              </p>
-            ) : field.type === "tree" ? (
-              <SubElementsTree data={field.value} />
-            ) : null}
-          </Section>
-        ))}
+      {/* Main content grid: 4 info mini-cards on top, 2 big company cards below. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+        <MiniCard
+          icon={FileText}
+          title="تعريف القدرة"
+          value={special?.definition || ""}
+        />
+        <MiniCard
+          icon={Target}
+          title="المتطلبات العملياتية"
+          value={special?.operational_requirements || ""}
+        />
+        <MiniCard
+          icon={FlaskConical}
+          title="سيناريوهات ومتطلبات التجارب"
+          value={special?.scenarios || ""}
+        />
+        <MiniCard
+          icon={Network}
+          title="العناصر الفرعية المكونة للقدرة"
+          value={special?.sub_elements || ""}
+        />
       </div>
 
-      {/* Image cards row — 3 sections side by side */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-        {imageCardFields.map((field) => {
-          const isEmpty = !field.value || field.value.trim() === "";
-          return (
-            <ImageSectionCard
-              key={field.key}
-              icon={field.icon}
-              title={field.title}
-              gradient={field.gradient}
-              isEmpty={isEmpty}
-            >
-              {field.type === "units" ? (
-                <UnitCard data={field.value} />
-              ) : (
-                <p className="text-sm text-text-muted leading-relaxed whitespace-pre-wrap">
-                  {field.value}
-                </p>
-              )}
-            </ImageSectionCard>
-          );
-        })}
-      </div>
+      {/* Companies section */}
+      <div className="glass-panel rounded-2xl p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-[2px] flex-1 bg-gradient-to-l from-accent/40 to-transparent" />
+          <h2 className="text-sm font-bold text-text">
+            الشركات المصنعة للقدرة
+          </h2>
+          <div className="h-[2px] flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
+        </div>
 
-      {/* Prev / Next navigation */}
-      {siblings.length > 0 && currentIndex >= 0 && (
-        <nav
-          className="mt-6 flex items-stretch gap-3"
-          aria-label="تنقل بين الأنواع"
-        >
-          {prevCode ? (
-            <Link
-              href={buildTypeHref(prevCode)}
-              className="group flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl border border-line bg-bg-soft hover:border-accent-light hover:bg-accent-soft/30 transition-all duration-200"
-            >
-              <div className="w-10 h-10 rounded-xl bg-accent-soft/70 flex items-center justify-center shrink-0 group-hover:bg-accent-soft transition-colors">
-                <ChevronRight
-                  size={20}
-                  className="text-accent-light group-hover:-translate-x-0.5 transition-transform"
-                />
-              </div>
-              <div className="text-right flex-1 min-w-0">
-                <div className="text-[11px] text-text-muted">النوع السابق</div>
-                <div className="text-sm font-bold text-text truncate mt-0.5">
-                  {prevCode}
-                </div>
-              </div>
-            </Link>
-          ) : (
-            <div className="flex-1" aria-hidden />
-          )}
-
-          <div className="hidden sm:flex items-center justify-center px-4 rounded-2xl border border-line bg-glass text-xs text-text-muted min-w-[120px]">
-            <div className="text-center leading-tight">
-              <div className="font-black text-text text-sm">
-                {currentIndex + 1} / {totalInFilter}
-              </div>
-              {activeFourD && (
-                <div className="mt-0.5 text-[10px] text-accent-light">
-                  ضمن «{FOUR_D_LABELS_AR[activeFourD]}»
-                </div>
-              )}
-            </div>
+        {companies.length === 0 ? (
+          <p className="text-sm text-text-muted/60 text-center italic py-8">
+            لا توجد شركات مرتبطة بهذا النوع
+          </p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {companies.map((c) => {
+              const meta =
+                COMPANY_META[c.company_name] || COMPANY_META.Hanwha;
+              return (
+                <Link
+                  key={c.company_name}
+                  href={buildCompanyHref(c.company_name)}
+                  className={`group relative block rounded-2xl overflow-hidden border bg-bg-soft hover:ring-2 ${meta.ring} transition-all duration-200 hover:-translate-y-0.5`}
+                >
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${meta.bg} pointer-events-none`}
+                  />
+                  <div className="relative p-5 flex items-center gap-4">
+                    {/* Logo */}
+                    <div className="shrink-0 w-28 h-28 rounded-xl bg-white flex items-center justify-center border border-line overflow-hidden">
+                      <Image
+                        src={meta.logo}
+                        alt={c.company_name}
+                        width={220}
+                        height={220}
+                        className="w-full h-full object-contain p-2"
+                      />
+                    </div>
+                    {/* Text */}
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[11px] font-bold ${meta.accent}`}>
+                        {c.company_name === "Hanwha"
+                          ? "كوريا الجنوبية"
+                          : c.company_name === "Norinco"
+                          ? "الصين"
+                          : ""}
+                      </div>
+                      <div className="text-xl font-black text-text mt-0.5">
+                        {c.company_name}
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-line/60">
+                        <div className="text-[11px] text-text-muted">
+                          اسم القدرة
+                        </div>
+                        <div className="text-sm font-bold text-text mt-0.5 truncate">
+                          {c.capability_name || "—"}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Arrow */}
+                    <div className="shrink-0 w-9 h-9 rounded-lg bg-accent-soft/60 flex items-center justify-center group-hover:bg-accent-soft group-hover:-translate-x-0.5 transition-all">
+                      <ArrowLeft size={18} className="text-accent-light" />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
-
-          {nextCode ? (
-            <Link
-              href={buildTypeHref(nextCode)}
-              className="group flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl border border-line bg-bg-soft hover:border-accent-light hover:bg-accent-soft/30 transition-all duration-200"
-            >
-              <div className="text-left flex-1 min-w-0">
-                <div className="text-[11px] text-text-muted">النوع التالي</div>
-                <div className="text-sm font-bold text-text truncate mt-0.5">
-                  {nextCode}
-                </div>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-accent-soft/70 flex items-center justify-center shrink-0 group-hover:bg-accent-soft transition-colors">
-                <ChevronLeft
-                  size={20}
-                  className="text-accent-light group-hover:translate-x-0.5 transition-transform"
-                />
-              </div>
-            </Link>
-          ) : (
-            <div className="flex-1" aria-hidden />
-          )}
-        </nav>
-      )}
+        )}
+      </div>
     </div>
   );
 }

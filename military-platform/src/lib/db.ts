@@ -81,6 +81,33 @@ export function initializeDatabase() {
       conflict_participation TEXT DEFAULT ''
     );
 
+    CREATE TABLE IF NOT EXISTS company_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      capability_code TEXT NOT NULL,
+      type TEXT DEFAULT '',
+      capability_name TEXT DEFAULT '',
+      company_name TEXT DEFAULT '',
+      company_info TEXT DEFAULT '',
+      scope_definition TEXT DEFAULT '',
+      development_history TEXT DEFAULT '',
+      armament TEXT DEFAULT '',
+      cost TEXT DEFAULT '',
+      family TEXT DEFAULT '',
+      technical_specs TEXT DEFAULT '',
+      countries_used TEXT DEFAULT '',
+      training_requirements TEXT DEFAULT '',
+      localization_status TEXT DEFAULT '',
+      system_formation TEXT DEFAULT '',
+      factory_tests TEXT DEFAULT '',
+      storage_requirements TEXT DEFAULT '',
+      sub_systems TEXT DEFAULT '',
+      conflict_participation TEXT DEFAULT ''
+    );
+    CREATE INDEX IF NOT EXISTS idx_company_profiles_code
+      ON company_profiles (capability_code);
+    CREATE INDEX IF NOT EXISTS idx_company_profiles_code_company
+      ON company_profiles (capability_code, company_name);
+
     CREATE TABLE IF NOT EXISTS logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       timestamp TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
@@ -128,11 +155,14 @@ function trySeedFromDefault() {
 
   try {
     const buffer = fs.readFileSync(DEFAULT_XLSX_PATH);
-    const { keyData, specialData, generalData } = parseExcelBuffer(buffer);
+    const { keyData, specialData, generalData, companyData } =
+      parseExcelBuffer(buffer);
 
     if (keyData.length > 0) insertKeyData(keyData);
     if (specialData.length > 0) insertSpecialRequirements(specialData);
     if (generalData.length > 0) insertGeneralRequirements(generalData);
+    if (companyData && companyData.length > 0)
+      insertCompanyProfiles(companyData);
 
     rebuildSearchIndex();
 
@@ -140,7 +170,7 @@ function trySeedFromDefault() {
 
     addLog(
       "تحميل تلقائي",
-      `تم تحميل الملف الافتراضي default.xlsx — البيانات الأساسية: ${keyData.length} صف، المتطلبات الخاصة: ${specialData.length} صف، المتطلبات العامة: ${generalData.length} صف`
+      `تم تحميل الملف الافتراضي default.xlsx — البيانات الأساسية: ${keyData.length} صف، المتطلبات الخاصة: ${specialData.length} صف، المتطلبات العامة: ${generalData.length} صف، ملفات الشركات: ${companyData?.length ?? 0} صف`
     );
   } catch (error) {
     console.error("Failed to seed from default xlsx:", error);
@@ -178,6 +208,7 @@ export function clearData() {
   db.exec("DELETE FROM key_data");
   db.exec("DELETE FROM special_requirements");
   db.exec("DELETE FROM general_requirements");
+  db.exec("DELETE FROM company_profiles");
   db.exec("DROP TABLE IF EXISTS search_index");
   db.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS search_index USING fts5(
@@ -239,6 +270,78 @@ export function insertGeneralRequirements(rows: Record<string, string>[]) {
   });
   insertMany(rows);
   db.close();
+}
+
+export function insertCompanyProfiles(rows: Record<string, string>[]) {
+  const db = getDb();
+  const stmt = db.prepare(`
+    INSERT INTO company_profiles (capability_code, type, capability_name, company_name, company_info, scope_definition, development_history, armament, cost, family, technical_specs, countries_used, training_requirements, localization_status, system_formation, factory_tests, storage_requirements, sub_systems, conflict_participation)
+    VALUES (@capability_code, @type, @capability_name, @company_name, @company_info, @scope_definition, @development_history, @armament, @cost, @family, @technical_specs, @countries_used, @training_requirements, @localization_status, @system_formation, @factory_tests, @storage_requirements, @sub_systems, @conflict_participation)
+  `);
+  const insertMany = db.transaction((items: Record<string, string>[]) => {
+    for (const item of items) {
+      stmt.run(item);
+    }
+  });
+  insertMany(rows);
+  db.close();
+}
+
+export type CompanyProfile = {
+  capability_code: string;
+  type: string;
+  capability_name: string;
+  company_name: string;
+  company_info: string;
+  scope_definition: string;
+  development_history: string;
+  armament: string;
+  cost: string;
+  family: string;
+  technical_specs: string;
+  countries_used: string;
+  training_requirements: string;
+  localization_status: string;
+  system_formation: string;
+  factory_tests: string;
+  storage_requirements: string;
+  sub_systems: string;
+  conflict_participation: string;
+};
+
+export function getCompaniesForType(
+  capabilityCode: string
+): { company_name: string; capability_name: string }[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT company_name, capability_name
+       FROM company_profiles
+       WHERE capability_code = ?
+       ORDER BY id`
+    )
+    .all(capabilityCode) as { company_name: string; capability_name: string }[];
+  db.close();
+  return rows;
+}
+
+export function getCompanyProfile(
+  capabilityCode: string,
+  companyName: string
+): { key: Record<string, string> | null; profile: CompanyProfile | null } {
+  const db = getDb();
+  const key = db
+    .prepare("SELECT * FROM key_data WHERE capability_code = ?")
+    .get(capabilityCode) as Record<string, string> | undefined;
+  const profile = db
+    .prepare(
+      `SELECT * FROM company_profiles
+       WHERE capability_code = ? AND company_name = ?
+       LIMIT 1`
+    )
+    .get(capabilityCode, companyName) as CompanyProfile | undefined;
+  db.close();
+  return { key: key || null, profile: profile || null };
 }
 
 export function rebuildSearchIndex() {

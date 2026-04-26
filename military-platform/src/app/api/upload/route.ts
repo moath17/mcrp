@@ -5,6 +5,7 @@ import {
   insertKeyData,
   insertSpecialRequirements,
   insertGeneralRequirements,
+  insertCompanyProfiles,
   rebuildSearchIndex,
   addLog,
   setDataSource,
@@ -27,18 +28,21 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const { keyData, specialData, generalData, sheetNames } = parseExcelBuffer(buffer);
+    const { keyData, specialData, generalData, companyData, sheetNames } =
+      parseExcelBuffer(buffer);
 
     clearData();
 
     if (keyData.length > 0) insertKeyData(keyData);
     if (specialData.length > 0) insertSpecialRequirements(specialData);
     if (generalData.length > 0) insertGeneralRequirements(generalData);
+    if (companyData && companyData.length > 0)
+      insertCompanyProfiles(companyData);
 
     rebuildSearchIndex();
     setDataSource("upload", file.name);
 
-    const summary = `تم رفع الملف "${file.name}" - الأوراق: ${sheetNames.join(", ")} - البيانات الأساسية: ${keyData.length} صف، المتطلبات الخاصة: ${specialData.length} صف، المتطلبات العامة: ${generalData.length} صف`;
+    const summary = `تم رفع الملف "${file.name}" - الأوراق: ${sheetNames.join(", ")} - البيانات الأساسية: ${keyData.length} صف، المتطلبات الخاصة: ${specialData.length} صف، المتطلبات العامة: ${generalData.length} صف، ملفات الشركات: ${companyData?.length ?? 0} صف`;
     addLog("رفع ملف", summary);
 
     return NextResponse.json({
@@ -50,6 +54,7 @@ export async function POST(request: NextRequest) {
         keyDataRows: keyData.length,
         specialRows: specialData.length,
         generalRows: generalData.length,
+        companyRows: companyData?.length ?? 0,
       },
     });
   } catch (error) {
