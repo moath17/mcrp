@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import {
   Loader2,
   FileText,
@@ -11,12 +12,26 @@ import {
   Building2,
   MapPin,
   Factory,
+  ChevronRight,
+  ChevronLeft,
   type LucideIcon,
 } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 import SubElementsTree from "@/components/SubElementsTree";
 import UnitCard from "@/components/UnitCard";
-import { getPathBySlug } from "@/lib/paths-config";
+import {
+  getPathBySlug,
+  getDbNameFromSlug,
+  FOUR_D_KEYS,
+  FOUR_D_LABELS_AR,
+  type FourDKey,
+} from "@/lib/paths-config";
+
+interface SiblingType {
+  capability_code: string;
+  type: string;
+  four_d?: string;
+}
 
 interface TypeData {
   key: {
@@ -114,12 +129,27 @@ function ImageSectionCard({
 
 export default function TypeDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = decodeURIComponent(params.slug as string);
   const code = decodeURIComponent(params.code as string);
   const pathConfig = getPathBySlug(slug);
+  const dbName = getDbNameFromSlug(slug);
+
+  const rawFourD = searchParams.get("4d");
+  const activeFourD: FourDKey | null = useMemo(() => {
+    if (!rawFourD) return null;
+    return (FOUR_D_KEYS as string[]).includes(rawFourD)
+      ? (rawFourD as FourDKey)
+      : null;
+  }, [rawFourD]);
+
+  const fourDSuffix = activeFourD
+    ? `?4d=${encodeURIComponent(activeFourD)}`
+    : "";
 
   const [data, setData] = useState<TypeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [siblings, setSiblings] = useState<SiblingType[]>([]);
 
   useEffect(() => {
     fetch(`/api/data?action=detail&code=${encodeURIComponent(code)}`)
@@ -129,6 +159,54 @@ export default function TypeDetailPage() {
       })
       .finally(() => setLoading(false));
   }, [code]);
+
+  // Load sibling types in the same path (flattened in display order)
+  // and filter by active 4D so prev/next navigation stays within the filter.
+  useEffect(() => {
+    if (!dbName) return;
+    fetch(`/api/path-capabilities?path=${encodeURIComponent(dbName)}`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (!res.success) return;
+        const flat: SiblingType[] = [];
+        type RawCap = {
+          subCapabilities: {
+            types: SiblingType[];
+          }[];
+        };
+        for (const cap of (res.capabilities || []) as RawCap[]) {
+          for (const sub of cap.subCapabilities || []) {
+            for (const t of sub.types || []) {
+              flat.push({
+                capability_code: t.capability_code,
+                type: t.type,
+                four_d: t.four_d,
+              });
+            }
+          }
+        }
+        setSiblings(flat);
+      });
+  }, [dbName]);
+
+  const { prevCode, nextCode, currentIndex, totalInFilter } = useMemo(() => {
+    const list = activeFourD
+      ? siblings.filter((s) => s.four_d === activeFourD)
+      : siblings;
+    const idx = list.findIndex((s) => s.capability_code === code);
+    return {
+      prevCode: idx > 0 ? list[idx - 1].capability_code : null,
+      nextCode:
+        idx >= 0 && idx < list.length - 1 ? list[idx + 1].capability_code : null,
+      currentIndex: idx,
+      totalInFilter: list.length,
+    };
+  }, [siblings, activeFourD, code]);
+
+  const buildTypeHref = (targetCode: string) =>
+    `/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(
+      targetCode
+    )}${fourDSuffix}`;
 
   if (loading) {
     return (
@@ -143,7 +221,10 @@ export default function TypeDetailPage() {
       <div className="animate-fade-in">
         <Breadcrumb
           items={[
-            { label: pathConfig?.name || slug, href: `/path/${encodeURIComponent(slug)}` },
+            {
+              label: pathConfig?.name || slug,
+              href: `/path/${encodeURIComponent(slug)}${fourDSuffix}`,
+            },
             { label: "تفاصيل النوع" },
           ]}
         />
@@ -218,7 +299,10 @@ export default function TypeDetailPage() {
     <div className="animate-fade-in">
       <Breadcrumb
         items={[
-          { label: pathConfig?.name || slug, href: `/path/${encodeURIComponent(slug)}` },
+          {
+            label: pathConfig?.name || slug,
+            href: `/path/${encodeURIComponent(slug)}${fourDSuffix}`,
+          },
           { label: key.type || key.sub_capability || key.capability || "تفاصيل النوع" },
         ]}
       />
@@ -293,6 +377,71 @@ export default function TypeDetailPage() {
           );
         })}
       </div>
+
+      {/* Prev / Next navigation */}
+      {siblings.length > 0 && currentIndex >= 0 && (
+        <nav
+          className="mt-6 flex items-stretch gap-3"
+          aria-label="تنقل بين الأنواع"
+        >
+          {prevCode ? (
+            <Link
+              href={buildTypeHref(prevCode)}
+              className="group flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl border border-line bg-bg-soft hover:border-accent-light hover:bg-accent-soft/30 transition-all duration-200"
+            >
+              <div className="w-10 h-10 rounded-xl bg-accent-soft/70 flex items-center justify-center shrink-0 group-hover:bg-accent-soft transition-colors">
+                <ChevronRight
+                  size={20}
+                  className="text-accent-light group-hover:-translate-x-0.5 transition-transform"
+                />
+              </div>
+              <div className="text-right flex-1 min-w-0">
+                <div className="text-[11px] text-text-muted">النوع السابق</div>
+                <div className="text-sm font-bold text-text truncate mt-0.5">
+                  {prevCode}
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <div className="flex-1" aria-hidden />
+          )}
+
+          <div className="hidden sm:flex items-center justify-center px-4 rounded-2xl border border-line bg-glass text-xs text-text-muted min-w-[120px]">
+            <div className="text-center leading-tight">
+              <div className="font-black text-text text-sm">
+                {currentIndex + 1} / {totalInFilter}
+              </div>
+              {activeFourD && (
+                <div className="mt-0.5 text-[10px] text-accent-light">
+                  ضمن «{FOUR_D_LABELS_AR[activeFourD]}»
+                </div>
+              )}
+            </div>
+          </div>
+
+          {nextCode ? (
+            <Link
+              href={buildTypeHref(nextCode)}
+              className="group flex-1 flex items-center gap-3 px-5 py-4 rounded-2xl border border-line bg-bg-soft hover:border-accent-light hover:bg-accent-soft/30 transition-all duration-200"
+            >
+              <div className="text-left flex-1 min-w-0">
+                <div className="text-[11px] text-text-muted">النوع التالي</div>
+                <div className="text-sm font-bold text-text truncate mt-0.5">
+                  {nextCode}
+                </div>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-accent-soft/70 flex items-center justify-center shrink-0 group-hover:bg-accent-soft transition-colors">
+                <ChevronLeft
+                  size={20}
+                  className="text-accent-light group-hover:translate-x-0.5 transition-transform"
+                />
+              </div>
+            </Link>
+          ) : (
+            <div className="flex-1" aria-hidden />
+          )}
+        </nav>
+      )}
     </div>
   );
 }
