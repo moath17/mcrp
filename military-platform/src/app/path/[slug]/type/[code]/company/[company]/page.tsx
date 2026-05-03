@@ -4,28 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import {
-  Loader2,
-  ArrowRight,
-  Building2,
-  Tag,
-  Boxes,
-  Calendar,
-  Crosshair,
-  Wallet,
-  GitBranch,
-  Cpu,
-  Globe2,
-  GraduationCap,
-  ShieldCheck,
-  Layers,
-  FlaskConical,
-  Warehouse,
-  Wrench,
-  Swords,
-  Info,
-  FileText,
-} from "lucide-react";
+import { Loader2, ArrowRight } from "lucide-react";
 import Breadcrumb from "@/components/Breadcrumb";
 import {
   getPathBySlug,
@@ -65,23 +44,25 @@ interface Profile {
   conflict_participation: string;
 }
 
+// Bump LOGO_VERSION whenever the logo files in /public/images/companies are
+// replaced, so that next/image and the browser fetch the fresh asset.
+const LOGO_VERSION = "2";
+
 const COMPANY_META: Record<
   string,
-  { logo: string; country: string; accent: string; border: string; bgFrom: string }
+  { logo: string; country: string; accent: string; badge: string }
 > = {
   Hanwha: {
-    logo: "/images/companies/hanwha.png",
+    logo: `/images/companies/hanwha.png?v=${LOGO_VERSION}`,
     country: "كوريا الجنوبية",
     accent: "text-orange-300",
-    border: "border-orange-400/40",
-    bgFrom: "from-orange-500/10",
+    badge: "bg-orange-500/10 border-orange-400/30",
   },
   Norinco: {
-    logo: "/images/companies/norinco.png",
+    logo: `/images/companies/norinco.png?v=${LOGO_VERSION}`,
     country: "الصين",
     accent: "text-red-300",
-    border: "border-red-400/40",
-    bgFrom: "from-red-500/10",
+    badge: "bg-red-500/10 border-red-400/30",
   },
 };
 
@@ -93,77 +74,56 @@ const FOUR_D_CHIP: Record<FourDKey, string> = {
     "bg-fuchsia-500/15 text-fuchsia-200 border-fuchsia-400/40",
 };
 
-// 19 fields — exact order, with icon + label.
-// Laid out on a 5-col grid (xl) so we get 4 rows (5+5+5+4 = 19) that fit
-// into a single viewport on desktop. On smaller screens the grid degrades
-// gracefully (4 / 3 / 2 cols).
-type FieldKey = Exclude<keyof Profile, "capability_code" | "company_name">;
-
-const FIELDS: {
-  key: FieldKey;
+/**
+ * FormCell — a single rectangular field that mirrors the look of an Excel
+ * template cell: small label band on top, then the actual data below.
+ * Kept intentionally calm (soft borders, low contrast) per the original
+ * template's note "محاولة اظهار الحدود (لكل خانة) بشكل هادئ".
+ */
+function FormCell({
+  label,
+  value,
+  minHeight = "min-h-[78px]",
+  clamp = "line-clamp-3",
+  centerLabel = false,
+}: {
   label: string;
-  icon: typeof FileText;
-  // clamp controls how many lines the card body shows
-  clamp: number;
-}[] = [
-  { key: "capability_name", label: "اسم القدرة", icon: Tag, clamp: 2 },
-  { key: "type", label: "النوع", icon: Boxes, clamp: 2 },
-  { key: "company_info", label: "تعريف بالشركة", icon: Building2, clamp: 5 },
-  { key: "scope_definition", label: "نطاق التعريف للقدرة", icon: Info, clamp: 5 },
-  {
-    key: "development_history",
-    label: "تاريخ التطوير الخاص بالقدرة",
-    icon: Calendar,
-    clamp: 5,
-  },
-  { key: "armament", label: "التسليح والذخائر/الصواريخ", icon: Crosshair, clamp: 5 },
-  { key: "cost", label: "تكلفة القدرة", icon: Wallet, clamp: 2 },
-  { key: "family", label: "عائلة القدرة والأنواع المتاحة", icon: GitBranch, clamp: 5 },
-  { key: "technical_specs", label: "المواصفات الفنية", icon: Cpu, clamp: 5 },
-  {
-    key: "countries_used",
-    label: "الدول والقوات المستخدمة",
-    icon: Globe2,
-    clamp: 3,
-  },
-  { key: "training_requirements", label: "متطلبات التدريب", icon: GraduationCap, clamp: 5 },
-  {
-    key: "localization_status",
-    label: "حالة التوطين للقدرة",
-    icon: ShieldCheck,
-    clamp: 2,
-  },
-  { key: "system_formation", label: "تشكيل المنظومة", icon: Layers, clamp: 5 },
-  {
-    key: "factory_tests",
-    label: "الاختبارات المصنعية",
-    icon: FlaskConical,
-    clamp: 5,
-  },
-  {
-    key: "storage_requirements",
-    label: "متطلبات التخزين والاستدامة",
-    icon: Warehouse,
-    clamp: 5,
-  },
-  { key: "sub_systems", label: "الأنظمة الفرعية المرتبطة", icon: Wrench, clamp: 5 },
-  {
-    key: "conflict_participation",
-    label: "المشاركة في النزاعات",
-    icon: Swords,
-    clamp: 5,
-  },
-];
-// Note: the grid shows 17 "data" cards here; the remaining 2 out of the 19 sheet fields
-// (رمز القدرة، اسم الشركة) appear as the hero badges — we don't waste grid cells on them.
-
-const CLAMP_MAP: Record<number, string> = {
-  2: "line-clamp-2",
-  3: "line-clamp-3",
-  4: "line-clamp-4",
-  5: "line-clamp-5",
-  6: "line-clamp-6",
-};
+  value?: string;
+  minHeight?: string;
+  clamp?: string;
+  centerLabel?: boolean;
+}) {
+  const isEmpty = !value || value.trim() === "";
+  return (
+    <div
+      className={`group rounded-md border border-line/60 bg-bg-soft/40 hover:border-accent/40 hover:bg-bg-soft/60 transition-colors overflow-hidden ${minHeight} flex flex-col`}
+    >
+      <div
+        className={`px-3 py-1.5 bg-bg-soft/80 border-b border-line/50 ${
+          centerLabel ? "text-center" : "text-right"
+        }`}
+      >
+        <span className="text-[12.5px] font-bold text-text-muted tracking-wide">
+          {label}
+        </span>
+      </div>
+      <div className="flex-1 px-3 py-2 overflow-hidden">
+        {isEmpty ? (
+          <p className="text-[12px] text-text-muted/50 italic leading-relaxed">
+            لا توجد بيانات
+          </p>
+        ) : (
+          <p
+            className={`text-[13.5px] text-text leading-relaxed whitespace-pre-wrap ${clamp}`}
+            title={value}
+          >
+            {value}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function CompanyDetailPage() {
   const params = useParams();
@@ -239,6 +199,11 @@ export default function CompanyDetailPage() {
   const meta = COMPANY_META[company] || COMPANY_META.Hanwha;
   const fourDKey = (key.four_d || activeFourD || "") as FourDKey;
   const typeHref = `/path/${encodeURIComponent(slug)}/type/${encodeURIComponent(code)}${fourDSuffix}`;
+  const subTitleText =
+    key.sub_capability ||
+    key.capability ||
+    pathConfig?.name ||
+    "العنوان الفرعي";
 
   return (
     <div className="animate-fade-in">
@@ -256,119 +221,333 @@ export default function CompanyDetailPage() {
         ]}
       />
 
-      {/* Hero strip — logo + capability name + metadata + back link. Compact. */}
-      <div
-        className={`relative glass-panel rounded-2xl p-4 mb-3 overflow-hidden border ${meta.border}`}
-      >
-        <div
-          className={`absolute inset-0 bg-gradient-to-l ${meta.bgFrom} via-transparent to-transparent pointer-events-none`}
-        />
-        <div className="relative flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-4 min-w-0">
-            <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center border border-line overflow-hidden shrink-0">
-              <Image
-                src={meta.logo}
-                alt={company}
-                width={220}
-                height={220}
-                className="w-full h-full object-contain p-1.5"
-              />
-            </div>
-            <div className="min-w-0">
-              <div
-                className={`text-[11px] font-bold uppercase tracking-wider ${meta.accent}`}
+      {/* ───────────────── Top header strip ─────────────────
+          Mirrors the Excel template:
+            - Sub-title bar (wide, gray) on the right (RTL leading edge)
+            - Red "النوع" cell on the left of the strip
+            - Small back-link aligned with the strip
+      */}
+      <div className="grid grid-cols-12 gap-2 mb-2">
+        <div className="col-span-12 md:col-span-9 order-2 md:order-1">
+          <div className="rounded-md border border-line/60 bg-bg-soft/60 px-3.5 py-2.5 h-full flex items-center gap-3">
+            <span className="text-[12px] font-bold text-text-muted shrink-0">
+              العنوان الفرعي
+            </span>
+            <span className="h-4 w-px bg-line/60" />
+            <span className="text-[15px] font-bold text-text truncate">
+              {subTitleText}
+            </span>
+            {fourDKey && FOUR_D_CHIP[fourDKey] && (
+              <span
+                className={`mr-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[12px] font-bold ${FOUR_D_CHIP[fourDKey]}`}
               >
-                {meta.country}
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-black text-text leading-tight">
-                {profile.capability_name || company}
-              </h1>
-              <div className="flex items-center gap-2 mt-1.5 flex-wrap text-[11px]">
-                <span className="px-2 py-0.5 rounded-full bg-bg-soft/80 text-text-muted border border-line font-bold">
-                  {company}
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-bg-soft/80 text-text-muted border border-line">
-                  {key.capability_code}
-                </span>
-                {key.capability && (
-                  <span className="px-2 py-0.5 rounded-full bg-accent-soft text-accent-light border border-accent/20">
-                    {key.capability}
-                  </span>
-                )}
-                {key.sub_capability && (
-                  <span className="px-2 py-0.5 rounded-full bg-accent2-soft text-accent2 border border-accent2/20">
-                    {key.sub_capability}
-                  </span>
-                )}
-                {fourDKey && FOUR_D_CHIP[fourDKey] && (
-                  <span
-                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border font-bold ${FOUR_D_CHIP[fourDKey]}`}
-                  >
-                    <Tag size={10} />
-                    {fourDKey} • {FOUR_D_LABELS_AR[fourDKey]}
-                  </span>
-                )}
-              </div>
+                {fourDKey} • {FOUR_D_LABELS_AR[fourDKey]}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="col-span-12 md:col-span-3 order-1 md:order-2">
+          <div className="rounded-md border border-red-500/40 overflow-hidden">
+            <div className="bg-red-700/80 px-3 py-1.5 text-center">
+              <span className="text-[12.5px] font-black text-white tracking-wider">
+                النوع
+              </span>
+            </div>
+            <div className="px-3 py-2 bg-bg-soft/60 text-center">
+              <span className="text-[14px] font-bold text-text truncate block">
+                {key.type || profile.type || "—"}
+              </span>
             </div>
           </div>
-
-          <Link
-            href={typeHref}
-            className="group flex items-center gap-2 px-3.5 py-2 rounded-xl border border-line bg-bg-soft hover:border-accent-light hover:bg-accent-soft/30 transition-all text-sm"
-          >
-            <span className="text-xs text-text-muted group-hover:text-text">
-              رجوع لصفحة النوع
-            </span>
-            <ArrowRight size={16} className="text-accent-light" />
-          </Link>
         </div>
       </div>
 
-      {/* Dashboard grid — 19 fields */}
-      {/*
-        Responsive column plan:
-          mobile: 1 col
-          sm: 2 cols
-          md: 3 cols
-          lg: 4 cols
-          xl: 5 cols (desktop: 4 rows × ≈5 cols fit 17 cards without scroll)
+      {/* ───────────────── Main composite block ─────────────────
+          2-column layout (RTL DOM order = visual right→left):
+            • Right (md:col-span-6): stacked label cells
+            • Left (md:col-span-6): image + small footer cells
       */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 auto-rows-fr">
-        {FIELDS.map(({ key: fieldKey, label, icon: Icon, clamp }) => {
-          const value = (profile[fieldKey] as string) || "";
-          const isEmpty = !value || value.trim() === "";
-          const clampClass = CLAMP_MAP[clamp] || "line-clamp-5";
-          return (
+      <div className="grid grid-cols-12 gap-2 mb-2">
+        {/* ===== Stacked field cells (right) ===== */}
+        <section className="col-span-12 md:col-span-6 order-1 flex flex-col gap-1.5">
+          <FormCell
+            label="اسم الشركة او Logo"
+            value={profile.company_name || company}
+            minHeight="min-h-[70px]"
+            clamp="line-clamp-2"
+          />
+          <FormCell
+            label="تعريف بالشركة"
+            value={profile.company_info}
+            minHeight="min-h-[100px]"
+            clamp="line-clamp-4"
+          />
+          <FormCell
+            label="تاريخ التطوير الخاص بالقدرة"
+            value={profile.development_history}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+          />
+          <FormCell
+            label="عائلة القدرة والأنواع المتاحة"
+            value={profile.family}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+          />
+          <FormCell
+            label="تشكيل المنظومة (ان وجدت)"
+            value={profile.system_formation}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+          />
+          <FormCell
+            label="تكلفة القدرة"
+            value={profile.cost}
+            minHeight="min-h-[70px]"
+            clamp="line-clamp-2"
+          />
+        </section>
+
+        {/* ===== Image + footer cells (leftmost) ===== */}
+        <section className="col-span-12 md:col-span-6 order-2 flex flex-col gap-1.5">
+          <div
+            className={`relative flex-1 min-h-[300px] rounded-md border ${meta.badge} overflow-hidden flex items-center justify-center bg-white`}
+          >
+            <Image
+              src={meta.logo}
+              alt={company}
+              width={520}
+              height={520}
+              className="w-full h-full object-contain p-6"
+            />
             <div
-              key={fieldKey}
-              className="group relative rounded-xl border border-line bg-bg-soft/70 p-2.5 flex flex-col min-h-[150px] hover:border-accent/40 hover:bg-bg-soft transition-colors"
-              title={value}
+              className={`absolute top-2 right-2 px-2.5 py-1 rounded-full border text-[12px] font-bold bg-bg-soft/90 border-line/70 ${meta.accent}`}
             >
-              <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-line/60">
-                <div className="w-6 h-6 rounded-md bg-accent-soft flex items-center justify-center shrink-0">
-                  <Icon size={12} className="text-accent-light" />
-                </div>
-                <h3 className="text-[11px] font-bold text-text truncate">
-                  {label}
-                </h3>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                {isEmpty ? (
-                  <p className="text-[11px] text-text-muted/50 italic leading-snug">
-                    لا توجد بيانات
-                  </p>
-                ) : (
-                  <p
-                    className={`text-[11.5px] text-text leading-snug whitespace-pre-wrap ${clampClass}`}
-                  >
-                    {value}
-                  </p>
-                )}
-              </div>
+              {meta.country}
             </div>
-          );
-        })}
+            <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full bg-bg-soft/90 border border-line/70 text-[12px] font-bold text-text-muted">
+              {key.capability_code}
+            </div>
+          </div>
+          <div className="grid grid-cols-12 gap-1.5">
+            <div className="col-span-4">
+              <FormCell
+                label="حالة التوطين للقدرة"
+                value={profile.localization_status}
+                minHeight="min-h-[72px]"
+                clamp="line-clamp-2"
+                centerLabel
+              />
+            </div>
+            <div className="col-span-8">
+              <FormCell
+                label="اسم القدرة"
+                value={profile.capability_name}
+                minHeight="min-h-[72px]"
+                clamp="line-clamp-2"
+                centerLabel
+              />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* ───────────────── Full-width row: نطاق التعريف ───────────────── */}
+      <div className="mb-2">
+        <FormCell
+          label="نطاق التعريف للقدرة"
+          value={profile.scope_definition}
+          minHeight="min-h-[100px]"
+          clamp="line-clamp-4"
+        />
+      </div>
+
+      {/* ───────────────── Paired 6 fields (2×3 grid) ─────────────────
+          Order matches the template:
+            row1:  متطلبات التخزين والاستدامة  |  التسليح والذخائر/الصواريخ
+            row2:  الاختبارات المصنعية للقدرة   |  الأنظمة الفرعية المرتبطة بالقدرة
+            row3:  مشاركة القدرة في النزاعات    |  متطلبات التدريب
+      */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 mb-2">
+          <FormCell
+            label="متطلبات التخزين والاستدامة"
+            value={profile.storage_requirements}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+            centerLabel
+          />
+          <FormCell
+            label="التسليح والذخائر / الصواريخ"
+            value={profile.armament}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+            centerLabel
+          />
+          <FormCell
+            label="الاختبارات المصنعية للقدرة"
+            value={profile.factory_tests}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+            centerLabel
+          />
+          <FormCell
+            label="الأنظمة الفرعية المرتبطة بالقدرة"
+            value={profile.sub_systems}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+            centerLabel
+          />
+          <FormCell
+            label="مشاركة القدرة في النزاعات"
+            value={profile.conflict_participation}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+            centerLabel
+          />
+          <FormCell
+            label="متطلبات التدريب"
+            value={profile.training_requirements}
+            minHeight="min-h-[88px]"
+            clamp="line-clamp-3"
+            centerLabel
+          />
+        </div>
+
+      {/* ───────────────── Countries / map (large full-width cell) ───────────────── */}
+      <div className="mb-3">
+        <FormCell
+          label="الدول والقوات المستخدمة للقدرة (خريطة)"
+          value={profile.countries_used}
+          minHeight="min-h-[160px]"
+          clamp="line-clamp-7"
+          centerLabel
+        />
+      </div>
+
+      {/* ───────────────── Technical specs table ─────────────────
+          Mirrors the green-headed table in the template:
+            ┌──────────── المواصفات الفنية ────────────┐
+            │  الهدف (left)         |   المعيار (right) │
+            │  ...rows...                              │
+      */}
+      <TechSpecsTable value={profile.technical_specs} />
+
+      {/* ───────────────── Footer link ───────────────── */}
+      <div className="mt-4 flex justify-end">
+        <Link
+          href={typeHref}
+          className="group flex items-center gap-2 px-4 py-2 rounded-md border border-line/60 bg-bg-soft/40 hover:border-accent-light hover:bg-accent-soft/30 transition-all text-[13px]"
+        >
+          <span className="text-text-muted group-hover:text-text">
+            رجوع لصفحة النوع
+          </span>
+          <ArrowRight size={16} className="text-accent-light" />
+        </Link>
       </div>
     </div>
   );
+}
+
+/**
+ * TechSpecsTable — renders technical_specs as a 2-column table
+ * (المعيار | الهدف) with a green header band, mirroring the Excel template.
+ *
+ * Parsing rules (best-effort, since the source is a free-text field):
+ *   - Split text on newlines → each non-empty line is one row.
+ *   - Inside a line, split on the first occurrence of " : ", "|", " - "
+ *     or "\t" to separate criterion (right) from target (left).
+ *   - If no separator is found, the whole line goes in the criterion column.
+ *   - When the field is empty, render 5 placeholder rows so the table still
+ *     looks like the template.
+ */
+function TechSpecsTable({ value }: { value?: string }) {
+  const rows = parseSpecRows(value);
+  return (
+    <div className="rounded-md border border-emerald-500/30 overflow-hidden">
+      <div className="bg-emerald-700/80 px-3 py-2 text-center border-b border-emerald-500/30">
+        <span className="text-[14px] font-black text-white tracking-wider">
+          المواصفات الفنية
+        </span>
+      </div>
+      <div className="grid grid-cols-2 bg-bg-soft/70 border-b border-line/50">
+        <div className="px-3 py-2 text-center border-l border-line/50">
+          <span className="text-[12.5px] font-bold text-text-muted">
+            الهدف
+          </span>
+        </div>
+        <div className="px-3 py-2 text-center">
+          <span className="text-[12.5px] font-bold text-text-muted">
+            المعيار
+          </span>
+        </div>
+      </div>
+      <div>
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className={`grid grid-cols-2 ${
+              i % 2 === 0 ? "bg-bg-soft/30" : "bg-bg-soft/10"
+            } border-b border-line/30 last:border-b-0`}
+          >
+            <div className="px-3 py-2.5 border-l border-line/40 min-h-[42px] flex items-center">
+              {row.target ? (
+                <span className="text-[13px] text-text leading-relaxed whitespace-pre-wrap">
+                  {row.target}
+                </span>
+              ) : (
+                <span className="text-[12px] text-text-muted/50 italic">
+                  —
+                </span>
+              )}
+            </div>
+            <div className="px-3 py-2.5 min-h-[42px] flex items-center">
+              {row.criterion ? (
+                <span className="text-[13px] text-text leading-relaxed whitespace-pre-wrap">
+                  {row.criterion}
+                </span>
+              ) : (
+                <span className="text-[12px] text-text-muted/50 italic">
+                  —
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function parseSpecRows(
+  value?: string
+): { criterion: string; target: string }[] {
+  const empty = Array.from({ length: 5 }, () => ({ criterion: "", target: "" }));
+  if (!value || value.trim() === "") return empty;
+
+  const lines = value
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return empty;
+
+  const splitRow = (line: string): { criterion: string; target: string } => {
+    // try common separators in order
+    const seps = [/\s\|\s/, /\t+/, /\s:\s/, /:\s/, /\s-\s/, /:/];
+    for (const sep of seps) {
+      const m = line.split(sep);
+      if (m.length >= 2) {
+        return {
+          criterion: m[0].trim(),
+          target: m.slice(1).join(" ").trim(),
+        };
+      }
+    }
+    return { criterion: line, target: "" };
+  };
+
+  const parsed = lines.map(splitRow);
+  // Pad to at least 5 rows so the table keeps its template look
+  while (parsed.length < 5) parsed.push({ criterion: "", target: "" });
+  return parsed;
 }

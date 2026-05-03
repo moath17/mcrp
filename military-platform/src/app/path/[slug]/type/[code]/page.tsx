@@ -60,18 +60,22 @@ interface CompanyListItem {
   capability_name: string;
 }
 
+// Bump LOGO_VERSION whenever the logo files in /public/images/companies are
+// replaced, so that next/image and the browser fetch the fresh asset.
+const LOGO_VERSION = "2";
+
 const COMPANY_META: Record<
   string,
   { logo: string; accent: string; ring: string; bg: string }
 > = {
   Hanwha: {
-    logo: "/images/companies/hanwha.png",
+    logo: `/images/companies/hanwha.png?v=${LOGO_VERSION}`,
     accent: "text-orange-300",
     ring: "ring-orange-400/50 border-orange-400/40",
     bg: "from-orange-500/15 via-amber-500/5 to-transparent",
   },
   Norinco: {
-    logo: "/images/companies/norinco.png",
+    logo: `/images/companies/norinco.png?v=${LOGO_VERSION}`,
     accent: "text-red-300",
     ring: "ring-red-400/50 border-red-400/40",
     bg: "from-red-500/15 via-red-500/5 to-transparent",
