@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
@@ -12,6 +13,24 @@ import {
   FOUR_D_LABELS_AR,
   type FourDKey,
 } from "@/lib/paths-config";
+
+// Heavy SVG world map — load on the client only (avoids SSR issues with
+// react-simple-maps' use of d3-geo) and keeps the initial bundle small.
+const CountriesMap = dynamic(() => import("@/components/CountriesMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-md border border-line/60 bg-bg-soft/40 overflow-hidden">
+      <div className="px-3 py-1.5 bg-bg-soft/80 border-b border-line/50 text-center">
+        <span className="text-[12.5px] font-bold text-text-muted tracking-wide">
+          الدول والقوات المستخدمة للقدرة
+        </span>
+      </div>
+      <div className="h-[420px] flex items-center justify-center bg-[#0b1426]">
+        <Loader2 size={24} className="animate-spin-slow text-accent-light" />
+      </div>
+    </div>
+  ),
+});
 
 interface KeyRow {
   capability_code: string;
@@ -270,12 +289,23 @@ export default function CompanyDetailPage() {
       <div className="grid grid-cols-12 gap-2 mb-2">
         {/* ===== Stacked field cells (right) ===== */}
         <section className="col-span-12 md:col-span-6 order-1 flex flex-col gap-1.5">
-          <FormCell
-            label="اسم الشركة او Logo"
-            value={profile.company_name || company}
-            minHeight="min-h-[70px]"
-            clamp="line-clamp-2"
-          />
+          {/* Company logo — transparent (no plate), aligned to the right
+              (RTL start), enlarged. A CSS filter inverts the colors so dark
+              brand text stays legible on the dark page background while the
+              brand silhouette/colors remain recognizable. */}
+          <div className="flex justify-start items-center px-1 py-1">
+            <Image
+              src={meta.logo}
+              alt={company}
+              width={360}
+              height={140}
+              className="h-[72px] w-auto object-contain select-none"
+              style={{
+                filter: "invert(1) hue-rotate(180deg) saturate(1.15)",
+              }}
+              priority
+            />
+          </div>
           <FormCell
             label="تعريف بالشركة"
             value={profile.company_info}
@@ -295,7 +325,7 @@ export default function CompanyDetailPage() {
             clamp="line-clamp-3"
           />
           <FormCell
-            label="تشكيل المنظومة (ان وجدت)"
+            label="تشكيل المنظومة"
             value={profile.system_formation}
             minHeight="min-h-[88px]"
             clamp="line-clamp-3"
@@ -308,17 +338,22 @@ export default function CompanyDetailPage() {
           />
         </section>
 
-        {/* ===== Image + footer cells (leftmost) ===== */}
+        {/* ===== Image + footer cells (leftmost) =====
+            Big hero image for the capability. We use a single shared
+            placeholder for now; later this can be swapped for a per-code
+            image at `/images/capabilities/{capability_code}.png` with the
+            default as the fallback. */}
         <section className="col-span-12 md:col-span-6 order-2 flex flex-col gap-1.5">
           <div
-            className={`relative flex-1 min-h-[300px] rounded-md border ${meta.badge} overflow-hidden flex items-center justify-center bg-white`}
+            className={`relative flex-1 min-h-[320px] rounded-md border ${meta.badge} overflow-hidden flex items-center justify-center bg-[#0b1426] p-3`}
           >
             <Image
-              src={meta.logo}
-              alt={company}
-              width={520}
-              height={520}
-              className="w-full h-full object-contain p-6"
+              src="/images/capabilities/default.png"
+              alt={`صورة القدرة ${key.capability_code}`}
+              width={1024}
+              height={576}
+              className="w-full h-full object-contain"
+              priority
             />
             <div
               className={`absolute top-2 right-2 px-2.5 py-1 rounded-full border text-[12px] font-bold bg-bg-soft/90 border-line/70 ${meta.accent}`}
@@ -413,15 +448,13 @@ export default function CompanyDetailPage() {
           />
         </div>
 
-      {/* ───────────────── Countries / map (large full-width cell) ───────────────── */}
+      {/* ───────────────── Countries / world map (full-width) ─────────────────
+          Real interactive SVG world map. Country names are extracted from
+          `profile.countries_used` (free-text Arabic), matched against an
+          internal Arabic→ISO numeric dictionary, and highlighted on the map.
+      */}
       <div className="mb-3">
-        <FormCell
-          label="الدول والقوات المستخدمة للقدرة (خريطة)"
-          value={profile.countries_used}
-          minHeight="min-h-[160px]"
-          clamp="line-clamp-7"
-          centerLabel
-        />
+        <CountriesMap value={profile.countries_used} />
       </div>
 
       {/* ───────────────── Technical specs table ─────────────────
@@ -429,6 +462,8 @@ export default function CompanyDetailPage() {
             ┌──────────── المواصفات الفنية ────────────┐
             │  الهدف (left)         |   المعيار (right) │
             │  ...rows...                              │
+            (RTL: المعيار on the visually-right column,
+                  الهدف on the visually-left column)
       */}
       <TechSpecsTable value={profile.technical_specs} />
 
@@ -472,12 +507,12 @@ function TechSpecsTable({ value }: { value?: string }) {
       <div className="grid grid-cols-2 bg-bg-soft/70 border-b border-line/50">
         <div className="px-3 py-2 text-center border-l border-line/50">
           <span className="text-[12.5px] font-bold text-text-muted">
-            الهدف
+            المعيار
           </span>
         </div>
         <div className="px-3 py-2 text-center">
           <span className="text-[12.5px] font-bold text-text-muted">
-            المعيار
+            الهدف
           </span>
         </div>
       </div>
@@ -490,9 +525,9 @@ function TechSpecsTable({ value }: { value?: string }) {
             } border-b border-line/30 last:border-b-0`}
           >
             <div className="px-3 py-2.5 border-l border-line/40 min-h-[42px] flex items-center">
-              {row.target ? (
+              {row.criterion ? (
                 <span className="text-[13px] text-text leading-relaxed whitespace-pre-wrap">
-                  {row.target}
+                  {row.criterion}
                 </span>
               ) : (
                 <span className="text-[12px] text-text-muted/50 italic">
@@ -501,9 +536,9 @@ function TechSpecsTable({ value }: { value?: string }) {
               )}
             </div>
             <div className="px-3 py-2.5 min-h-[42px] flex items-center">
-              {row.criterion ? (
+              {row.target ? (
                 <span className="text-[13px] text-text leading-relaxed whitespace-pre-wrap">
-                  {row.criterion}
+                  {row.target}
                 </span>
               ) : (
                 <span className="text-[12px] text-text-muted/50 italic">

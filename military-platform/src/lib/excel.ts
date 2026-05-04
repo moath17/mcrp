@@ -36,7 +36,7 @@ const GENERAL_COLUMNS: Record<string, string> = {
   "الدول والقوات المستخدمة للقدرة": "countries_used",
   "متطلبات التدريب": "training_requirements",
   "حالة التوطين للقدرة": "localization_status",
-  "تشكيل المنظومة (ان وجدت)": "system_formation",
+  "تشكيل المنظومة": "system_formation",
   "الاختبارات المصنعية للقدرة": "factory_tests",
   "متطلبات التخزين والاستدامة": "storage_requirements",
   "الأنظمة الفرعية المرتبطة بالقدرة": "sub_systems",
