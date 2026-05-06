@@ -87,7 +87,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen">
       {/* Top Bar */}
-      <header className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5 border-b border-line bg-[rgba(15,23,42,0.75)] backdrop-blur-xl">
+      <header className="sticky top-0 z-10 flex items-center justify-between px-5 py-3.5 border-b border-line bg-bg/80 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <Image
             src="/MNGDP LOGO 2 .png"
@@ -164,7 +164,7 @@ export default function HomePage() {
               placeholder="ابحث عن مسار…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 bg-transparent border-none outline-none text-text px-3 py-2 text-sm placeholder:text-[rgba(241,245,249,0.55)]"
+              className="flex-1 bg-transparent border-none outline-none text-text px-3 py-2 text-sm placeholder:text-text-muted"
             />
             <button
               type="button"
@@ -340,7 +340,7 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="max-w-[1240px] mx-auto mb-5 px-4 text-center text-[rgba(241,245,249,0.55)] text-xs">
+      <footer className="max-w-[1240px] mx-auto mb-5 px-4 text-center text-text-muted text-xs">
         © موسوعة القدرات
       </footer>
     </div>
