@@ -273,7 +273,7 @@ export default function ComparisonsPage() {
           }`}
         >
           <Hash size={16} />
-          مقارنة بين الرموز
+          مقارنة بين القدرات
         </button>
         <button
           onClick={() => switchMode("companies")}
@@ -368,7 +368,7 @@ function CodeVsCodeMode({
       <div className="glass-panel rounded-2xl p-5">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-4 items-end">
           <CodeSelect
-            label="الرمز الأول"
+            label="القدرة الأولى"
             codes={codes}
             value={codeA}
             onChange={setCodeA}
@@ -380,7 +380,7 @@ function CodeVsCodeMode({
             </div>
           </div>
           <CodeSelect
-            label="الرمز الثاني"
+            label="القدرة الثانية"
             codes={codes}
             value={codeB}
             onChange={setCodeB}
@@ -671,7 +671,7 @@ function CodeSelect({
   return (
     <CustomDropdown
       label={label}
-      placeholder="— اختر رمزاً —"
+      placeholder="— اختر قدرة—"
       options={options}
       value={value}
       onChange={onChange}
